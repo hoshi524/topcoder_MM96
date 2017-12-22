@@ -36,17 +36,23 @@ void print() {
 int selectColor(int a, int b, int t) {
   int x = -1, m = 0;
   for (int i = 0; i < MAX_C; ++i) {
-    if (a == i || b == i) continue;
-    if (m < remain[t][i]) {
-      m = remain[t][i];
+    if (a == i || b == i || remain[t][i] == 0) continue;
+    int v = (remain[t][i] << 16) + (get_random() & 0xff);
+    if (m < v) {
+      m = v;
       x = i;
     }
   }
   return x;
 }
 
+inline void padd(int p) { position[ps++] = p; }
+
+void padd(initializer_list<int> list) {
+  for (int x : list) padd(x);
+}
+
 bool put(int p, int t, int c) {
-  if (type[p] == -1) position[ps++] = p;
   type[p] = t;
   color[p] = c;
   --remain[t][c];
@@ -64,11 +70,6 @@ void del(int p) {
     ++remain[type[p]][color[p]];
     type[p] = -1;
     color[p] = -1;
-    for (int i = 0; i < ps; ++i)
-      if (position[i] == p) {
-        position[i] = position[--ps];
-        break;
-      }
   }
 }
 
@@ -104,53 +105,55 @@ class GarlandOfLights {
       put(p + 1, 1);
       put(p + ROW, 3);
       put(p + ROW + 1, 2);
+      padd({p, p + 1, p + ROW, p + ROW + 1});
       std::mt19937 engine(get_random());
-      for (int i = 0; i < 100; ++i) {
-        for (int j = 0; j < ps; ++j) {
-          for (int k = 0; k < 2; ++k) {
-            int a = position[j];
-            int b = a + D[type[a]][k];
-            if (a > b) swap(a, b);
-            int pat = type[a], pbt = type[b];
-            int pac = color[a], pbc = color[b];
-            del({a, b});
-            auto next = [&](int d, int *DA, int *DB, int t1, int t2) {
-              if (type[a + d] == -1 && type[b + d] == -1) {
-                if (put(a, DA[pat]) && put(b, DB[pbt]) && put(a + d, t1) &&
-                    put(b + d, t2))
-                  return true;
-                del({a, b, a + d, b + d});
+    start:
+      shuffle(position, position + ps, engine);
+      for (int j = 0; j < ps; ++j) {
+        for (int k = 0; k < 2; ++k) {
+          int a = position[j];
+          int b = a + D[type[a]][k];
+          if (a > b) swap(a, b);
+          int pat = type[a], pbt = type[b];
+          int pac = color[a], pbc = color[b];
+          del({a, b});
+          auto next = [&](int d, int *DA, int *DB, int t1, int t2) {
+            if (type[a + d] == -1 && type[b + d] == -1) {
+              if (put(a, DA[pat]) && put(b, DB[pbt]) && put(a + d, t1) &&
+                  put(b + d, t2)) {
+                padd({a + d, b + d});
+                return true;
               }
-              return false;
-            };
-            if (a + 1 == b) {
-              {
-                static int DA[] = {5, -1, -1, 5, 2, -1};
-                static int DB[] = {-1, 5, 5, -1, 3, -1};
-                if (next(-ROW, DA, DB, 0, 1)) break;
-              }
-              {
-                static int DA[] = {5, -1, -1, 5, 1, -1};
-                static int DB[] = {-1, 5, 5, -1, 0, -1};
-                if (next(ROW, DA, DB, 3, 2)) break;
-              }
-            } else {
-              {
-                static int DA[] = {4, 4, -1, -1, -1, 2};
-                static int DB[] = {-1, -1, 4, 4, -1, 1};
-                if (next(-1, DA, DB, 0, 3)) break;
-              }
-              {
-                static int DA[] = {4, 4, -1, -1, -1, 3};
-                static int DB[] = {-1, -1, 4, 4, -1, 0};
-                if (next(1, DA, DB, 1, 2)) break;
-              }
+              del({a, b, a + d, b + d});
             }
-            put(a, pat, pac);
-            put(b, pbt, pbc);
+            return false;
+          };
+          if (a + 1 == b) {
+            {
+              static int DA[] = {5, -1, -1, 5, 2, -1};
+              static int DB[] = {-1, 5, 5, -1, 3, -1};
+              if (next(-ROW, DA, DB, 0, 1)) goto start;
+            }
+            {
+              static int DA[] = {5, -1, -1, 5, 1, -1};
+              static int DB[] = {-1, 5, 5, -1, 0, -1};
+              if (next(ROW, DA, DB, 3, 2)) goto start;
+            }
+          } else {
+            {
+              static int DA[] = {4, 4, -1, -1, -1, 2};
+              static int DB[] = {-1, -1, 4, 4, -1, 1};
+              if (next(-1, DA, DB, 0, 3)) goto start;
+            }
+            {
+              static int DA[] = {4, 4, -1, -1, -1, 3};
+              static int DB[] = {-1, -1, 4, 4, -1, 0};
+              if (next(1, DA, DB, 1, 2)) goto start;
+            }
           }
+          put(a, pat, pac);
+          put(b, pbt, pbc);
         }
-        shuffle(position, position + ps, engine);
       }
     }
     {  // output
