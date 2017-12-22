@@ -10,6 +10,8 @@ inline unsigned get_random() {
 constexpr int ROW = 1 << 7;
 constexpr int MAX_X = ROW * ROW;
 constexpr int MAX_C = 4;
+constexpr int D[6][2] = {{1, ROW},  {-1, ROW}, {-1, -ROW},
+                         {1, -ROW}, {-1, 1},   {-ROW, ROW}};
 int H, W, N;
 int ps;
 int type[MAX_X];
@@ -18,8 +20,8 @@ int position[MAX_X];
 int remain[6][MAX_C];
 
 void print() {
-  for (int i = 0; i < H; ++i) {
-    for (int j = 0; j < W; ++j) {
+  for (int i = 1; i <= H; ++i) {
+    for (int j = 1; j <= W; ++j) {
       int p = i * ROW + j;
       if (type[p] == -1) {
         cerr << "   ";
@@ -43,14 +45,35 @@ int selectColor(int a, int b, int t) {
   return x;
 }
 
-int put(int p, int t) {
-  constexpr int D[6][2] = {{1, ROW},  {-1, ROW}, {-1, -ROW},
-                           {1, -ROW}, {-1, 1},   {-ROW, ROW}};
-  int c = selectColor(color[p + D[t][0]], color[p + D[t][1]], t);
+bool put(int p, int t, int c) {
   if (type[p] == -1) position[ps++] = p;
   type[p] = t;
   color[p] = c;
   --remain[t][c];
+}
+
+bool put(int p, int t) {
+  int c = selectColor(color[p + D[t][0]], color[p + D[t][1]], t);
+  if (c == -1) return false;
+  put(p, t, c);
+  return true;
+}
+
+void del(int p) {
+  if (type[p] != -1) {
+    ++remain[type[p]][color[p]];
+    type[p] = -1;
+    color[p] = -1;
+    for (int i = 0; i < ps; ++i)
+      if (position[i] == p) {
+        position[i] = position[--ps];
+        break;
+      }
+  }
+}
+
+void del(initializer_list<int> list) {
+  for (int x : list) del(x);
 }
 
 class GarlandOfLights {
@@ -68,6 +91,12 @@ class GarlandOfLights {
         ++remain[s[0] - '0'][s[1] - 'a'];
       }
       ps = 0;
+      for (int i = 0; i < H + 2; ++i) {
+        type[i * ROW] = type[i * ROW + W + 1] = -2;
+      }
+      for (int i = 0; i < W + 2; ++i) {
+        type[i] = type[(H + 1) * ROW + i] = -2;
+      }
     }
     {  // solve
       int p = (H >> 1) * ROW + (W >> 1);
@@ -75,6 +104,56 @@ class GarlandOfLights {
       put(p + 1, 1);
       put(p + ROW, 3);
       put(p + ROW + 1, 2);
+      int u[MAX_X];
+      for (int i = 0; i < N; ++i) u[i] = i;
+      std::mt19937 engine(get_random());
+      for (int i = 0; i < 100; ++i) {
+        for (int j = 0; j < ps; ++j) {
+          for (int k = 0; k < 2; ++k) {
+            int a = position[u[j]];
+            int b = a + D[type[a]][k];
+            if (a > b) swap(a, b);
+            int pat = type[a], pbt = type[b];
+            int pac = color[a], pbc = color[b];
+            del({a, b});
+            auto next = [&](int d, int *DA, int *DB, int t1, int t2) {
+              if (type[a + d] == -1 && type[b + d] == -1) {
+                if (put(a, DA[pat]) && put(b, DB[pbt]) && put(a + d, t1) &&
+                    put(b + d, t2))
+                  return true;
+                del({a, b, a + d, b + d});
+              }
+              return false;
+            };
+            if (a + 1 == b) {
+              {
+                static int DA[] = {5, -1, -1, 5, 2, -1};
+                static int DB[] = {-1, 5, 5, -1, 3, -1};
+                if (next(-ROW, DA, DB, 0, 1)) break;
+              }
+              {
+                static int DA[] = {5, -1, -1, 5, 1, -1};
+                static int DB[] = {-1, 5, 5, -1, 0, -1};
+                if (next(ROW, DA, DB, 3, 2)) break;
+              }
+            } else {
+              {
+                static int DA[] = {4, 4, -1, -1, -1, 2};
+                static int DB[] = {-1, -1, 4, 4, -1, 1};
+                if (next(-1, DA, DB, 0, 3)) break;
+              }
+              {
+                static int DA[] = {4, 4, -1, -1, -1, 3};
+                static int DB[] = {-1, -1, 4, 4, -1, 0};
+                if (next(1, DA, DB, 1, 2)) break;
+              }
+            }
+            put(a, pat, pac);
+            put(b, pbt, pbc);
+          }
+        }
+        shuffle(u, u + ps, engine);
+      }
     }
     {  // output
       int position[6][MAX_C][MAX_X];
@@ -92,7 +171,7 @@ class GarlandOfLights {
       vector<int> ret(N, -1);
       for (int i = 0; i < H; ++i) {
         for (int j = 0; j < W; ++j) {
-          int p = i * ROW + j;
+          int p = (i + 1) * ROW + (j + 1);
           if (type[p] == -1) continue;
           int t = type[p];
           int c = color[p];
