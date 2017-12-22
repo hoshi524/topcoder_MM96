@@ -104,13 +104,11 @@ class GarlandOfLights {
       put(p + 1, 1);
       put(p + ROW, 3);
       put(p + ROW + 1, 2);
-      int u[MAX_X];
-      for (int i = 0; i < N; ++i) u[i] = i;
       std::mt19937 engine(get_random());
       for (int i = 0; i < 100; ++i) {
         for (int j = 0; j < ps; ++j) {
           for (int k = 0; k < 2; ++k) {
-            int a = position[u[j]];
+            int a = position[j];
             int b = a + D[type[a]][k];
             if (a > b) swap(a, b);
             int pat = type[a], pbt = type[b];
@@ -152,7 +150,7 @@ class GarlandOfLights {
             put(b, pbt, pbc);
           }
         }
-        shuffle(u, u + ps, engine);
+        shuffle(position, position + ps, engine);
       }
     }
     {  // output
