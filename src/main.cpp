@@ -108,51 +108,91 @@ class GarlandOfLights {
       padd({p, p + 1, p + ROW, p + ROW + 1});
       std::mt19937 engine(get_random());
     start:
-      shuffle(position, position + ps, engine);
-      for (int j = 0; j < ps; ++j) {
-        for (int k = 0; k < 2; ++k) {
-          int a = position[j];
-          int b = a + D[type[a]][k];
-          if (a > b) swap(a, b);
-          int pat = type[a], pbt = type[b];
-          int pac = color[a], pbc = color[b];
-          del({a, b});
-          auto next = [&](int d, int *DA, int *DB, int t1, int t2) {
-            if (type[a + d] == -1 && type[b + d] == -1) {
-              if (put(a, DA[pat]) && put(b, DB[pbt]) && put(a + d, t1) &&
-                  put(b + d, t2)) {
-                padd({a + d, b + d});
-                return true;
+      for (int o = 0; o < 10; ++o) {
+        shuffle(position, position + ps, engine);
+        for (int j = 0; j < ps; ++j) {
+          for (int k = 0; k < 2; ++k) {
+            int a = position[j];
+            int b = a + D[type[a]][k];
+            if (a > b) swap(a, b);
+            int pat = type[a], pbt = type[b];
+            int pac = color[a], pbc = color[b];
+            del({a, b});
+            auto next = [&](int d, int *DA, int *DB, int t1, int t2) {
+              if (type[a + d] == -1 && type[b + d] == -1) {
+                if (put(a, DA[pat]) && put(b, DB[pbt]) && put(a + d, t1) &&
+                    put(b + d, t2)) {
+                  padd({a + d, b + d});
+                  return true;
+                }
+                del({a, b, a + d, b + d});
               }
-              del({a, b, a + d, b + d});
+              return false;
+            };
+            if (a + 1 == b) {
+              {
+                static int DA[] = {5, -1, -1, 5, 2, -1};
+                static int DB[] = {-1, 5, 5, -1, 3, -1};
+                if (next(-ROW, DA, DB, 0, 1)) goto start;
+              }
+              {
+                static int DA[] = {5, -1, -1, 5, 1, -1};
+                static int DB[] = {-1, 5, 5, -1, 0, -1};
+                if (next(ROW, DA, DB, 3, 2)) goto start;
+              }
+            } else {
+              {
+                static int DA[] = {4, 4, -1, -1, -1, 2};
+                static int DB[] = {-1, -1, 4, 4, -1, 1};
+                if (next(-1, DA, DB, 0, 3)) goto start;
+              }
+              {
+                static int DA[] = {4, 4, -1, -1, -1, 3};
+                static int DB[] = {-1, -1, 4, 4, -1, 0};
+                if (next(1, DA, DB, 1, 2)) goto start;
+              }
             }
-            return false;
-          };
-          if (a + 1 == b) {
-            {
-              static int DA[] = {5, -1, -1, 5, 2, -1};
-              static int DB[] = {-1, 5, 5, -1, 3, -1};
-              if (next(-ROW, DA, DB, 0, 1)) goto start;
-            }
-            {
-              static int DA[] = {5, -1, -1, 5, 1, -1};
-              static int DB[] = {-1, 5, 5, -1, 0, -1};
-              if (next(ROW, DA, DB, 3, 2)) goto start;
-            }
-          } else {
-            {
-              static int DA[] = {4, 4, -1, -1, -1, 2};
-              static int DB[] = {-1, -1, 4, 4, -1, 1};
-              if (next(-1, DA, DB, 0, 3)) goto start;
-            }
-            {
-              static int DA[] = {4, 4, -1, -1, -1, 3};
-              static int DB[] = {-1, -1, 4, 4, -1, 0};
-              if (next(1, DA, DB, 1, 2)) goto start;
+            put(a, pat, pac);
+            put(b, pbt, pbc);
+          }
+          {
+            int p = position[j];
+            int pt = type[p];
+            int np = p + D[pt][0] + D[pt][1];
+            auto next = [&](int nt, int *DA, int *DB) {
+              if (type[np] == -1) {
+                int a = p + D[pt][0];
+                int b = p + D[pt][1];
+                int pat = type[a], pbt = type[b];
+                int pac = color[a], pbc = color[b];
+                del({a, b});
+                if (put(a, DA[pat]) && put(b, DB[pbt]) && put(np, nt)) {
+                  del(p);
+                  position[j] = np;
+                } else {
+                  put(a, pat, pac);
+                  put(b, pbt, pbc);
+                }
+              }
+            };
+            if (pt == 0) {
+              static int DA[] = {-1, -1, 5, -1, 0, -1};
+              static int DB[] = {-1, -1, 4, -1, -1, 0};
+              next(2, DA, DB);
+            } else if (pt == 2) {
+              static int DA[] = {5, -1, -1, -1, 2, -1};
+              static int DB[] = {4, -1, -1, -1, -1, 2};
+              next(0, DA, DB);
+            } else if (pt == 1) {
+              static int DA[] = {-1, -1, -1, 5, 1, -1};
+              static int DB[] = {-1, -1, -1, 4, -1, 1};
+              next(3, DA, DB);
+            } else if (pt == 3) {
+              static int DA[] = {-1, 5, -1, -1, 3, -1};
+              static int DB[] = {-1, 4, -1, -1, -1, 3};
+              next(1, DA, DB);
             }
           }
-          put(a, pat, pac);
-          put(b, pbt, pbc);
         }
       }
     }
