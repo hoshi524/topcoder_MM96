@@ -31,6 +31,7 @@ void print() {
     }
     cerr << endl;
   }
+  cerr << endl;
 }
 
 int selectColor(int a, int b, int t) {
@@ -108,7 +109,7 @@ class GarlandOfLights {
       padd({p, p + 1, p + ROW, p + ROW + 1});
       std::mt19937 engine(get_random());
     start:
-      for (int o = 0; o < 10; ++o) {
+      for (int o = 0; o < 100; ++o) {
         shuffle(position, position + ps, engine);
         for (int j = 0; j < ps; ++j) {
           for (int k = 0; k < 2; ++k) {
@@ -170,6 +171,7 @@ class GarlandOfLights {
                   del(p);
                   position[j] = np;
                 } else {
+                  del({a, b});
                   put(a, pat, pac);
                   put(b, pbt, pbc);
                 }
@@ -193,6 +195,18 @@ class GarlandOfLights {
               next(1, DA, DB);
             }
           }
+        }
+        {
+          int sum = 0;
+          for (int i = 0; i < 6; ++i) {
+            for (int j = 0; j < 4; ++j) {
+              sum += remain[i][j];
+            }
+          }
+          for (int i = 0; i < MAX_X; ++i) {
+            if (type[i] > -1) ++sum;
+          }
+          assert(sum == N);
         }
       }
     }
