@@ -415,7 +415,7 @@ public class GarlandOfLightsVis {
                 e.printStackTrace();
             }
         }
-        System.out.println("Score = " + runTest(seed));
+        System.out.println(runTest(seed));
         if (proc != null)
             try {
                 proc.destroy();
