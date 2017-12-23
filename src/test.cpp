@@ -51,6 +51,7 @@ int selectColor(int a, int b, int t) {
 bool put(int p, int t, int c) {
   type[p] = t;
   color[p] = c;
+  assert(remain[t][c] > 0);
   --remain[t][c];
 }
 
@@ -108,6 +109,64 @@ class GarlandOfLights {
         put(p + ROW + 1, 2);
       start:
         for (int o = 0; o < 10; ++o) {
+          {
+            int minR = INT_MAX, maxR = INT_MIN;
+            int minC = INT_MAX, maxC = INT_MIN;
+            for (int i = 1; i <= H; ++i) {
+              for (int j = 1; j <= W; ++j) {
+                int p = i * ROW + j;
+                if (type[p] == -1) continue;
+                if (minC > i) minC = i;
+                if (maxC < i) maxC = i;
+                if (minR > j) minR = j;
+                if (maxR < j) maxR = j;
+              }
+            }
+            if (minR == 1 && maxR < W) {
+              for (int i = 1; i <= H; ++i) {
+                for (int j = W; j > 1; --j) {
+                  int p = i * ROW + j;
+                  type[p] = type[p - 1];
+                  color[p] = color[p - 1];
+                  type[p - 1] = -1;
+                  color[p - 1] = -1;
+                }
+              }
+            }
+            if (minR > 1 && maxR == W) {
+              for (int i = 1; i <= H; ++i) {
+                for (int j = 1; j < W; ++j) {
+                  int p = i * ROW + j;
+                  type[p] = type[p + 1];
+                  color[p] = color[p + 1];
+                  type[p + 1] = -1;
+                  color[p + 1] = -1;
+                }
+              }
+            }
+            if (minC == 1 && maxC < H) {
+              for (int i = H; i > 1; --i) {
+                for (int j = 1; j <= W; ++j) {
+                  int p = i * ROW + j;
+                  type[p] = type[p - ROW];
+                  color[p] = color[p - ROW];
+                  type[p - ROW] = -1;
+                  color[p - ROW] = -1;
+                }
+              }
+            }
+            if (minC > 1 && maxC == H) {
+              for (int i = 1; i < H; ++i) {
+                for (int j = 1; j <= W; ++j) {
+                  int p = i * ROW + j;
+                  type[p] = type[p + ROW];
+                  color[p] = color[p + ROW];
+                  type[p + ROW] = -1;
+                  color[p + ROW] = -1;
+                }
+              }
+            }
+          }
           int v = INT_MIN;
           int p1, p2, p3, p4;
           int t1, t2, t3, t4;
@@ -271,6 +330,18 @@ class GarlandOfLights {
             }
           }
         }
+      }
+      {
+        int sum = 0;
+        for (int i = 0; i < 6; ++i) {
+          for (int j = 0; j < 4; ++j) {
+            sum += remain[i][j];
+          }
+        }
+        for (int i = 0; i < MAX_X; ++i) {
+          if (type[i] > -1) ++sum;
+        }
+        assert(sum == N);
       }
       {
         int s = 0;

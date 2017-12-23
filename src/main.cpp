@@ -16,6 +16,8 @@ int H, W, N, C;
 int ps;
 int8_t type[MAX_X];
 int8_t color[MAX_X];
+int8_t btype[MAX_X];
+int8_t bcolor[MAX_X];
 int16_t remain[6][MAX_C];
 
 void print() {
@@ -49,7 +51,6 @@ int selectColor(int a, int b, int t) {
 bool put(int p, int t, int c) {
   type[p] = t;
   color[p] = c;
-  assert(remain[t][c] > 0);
   --remain[t][c];
 }
 
@@ -75,161 +76,212 @@ void del(initializer_list<int> list) {
 class GarlandOfLights {
  public:
   vector<int> create(int H_, int W_, vector<string> lights) {
-    {  // init
-      H = H_;
-      W = W_;
-      N = H * W;
-      C = 0;
-      memset(type, -1, sizeof(type));
-      memset(color, -1, sizeof(color));
-      memset(remain, 0, sizeof(remain));
-      for (string s : lights) {
-        int t = s[0] - '0';
-        int c = s[1] - 'a';
-        ++remain[t][c];
-        if (C < c + 1) C = c + 1;
-      }
-      ps = 0;
-      for (int i = 0; i < H + 2; ++i) {
-        type[i * ROW] = type[i * ROW + W + 1] = -2;
-      }
-      for (int i = 0; i < W + 2; ++i) {
-        type[i] = type[(H + 1) * ROW + i] = -2;
-      }
-    }
-    {  // solve
-      int p = (H >> 1) * ROW + (W >> 1);
-      put(p, 0);
-      put(p + 1, 1);
-      put(p + ROW, 3);
-      put(p + ROW + 1, 2);
-    start:
-      for (int o = 0; o < 10; ++o) {
-        int v = INT_MIN;
-        int p1, p2, p3, p4;
-        int t1, t2, t3, t4;
-        int c1, c2, c3, c4;
-        for (int j = 0; j < MAX_X; ++j) {
-          if (type[j] < 0) continue;
-          for (int k = 0; k < 2; ++k) {
-            int a = j;
-            int b = a + D[type[a]][k];
-            if (a > b) swap(a, b);
-            int pat = type[a], pbt = type[b];
-            int pac = color[a], pbc = color[b];
-            del({a, b});
-            auto next = [&](int d, int at, int bt, int ct, int dt) {
-              auto next = [&](int c, int d) {
-                if (type[c] == -1 && type[d] == -1) {
-                  if (put(a, at) && put(b, bt) && put(c, ct) && put(d, dt)) {
-                    int tv = 0;
-                    tv += remain[type[a]][color[a]];
-                    tv += remain[type[b]][color[b]];
-                    tv += remain[type[c]][color[c]];
-                    tv += remain[type[d]][color[d]];
-                    tv -= remain[type[pat]][color[pac]];
-                    tv -= remain[type[pbt]][color[pbc]];
-                    tv = (tv * 0x10000) + (get_random() & 0xffff);
-                    if (v < tv) {
-                      v = tv;
-                      p1 = a, t1 = type[a], c1 = color[a];
-                      p2 = b, t2 = type[b], c2 = color[b];
-                      p3 = c, t3 = type[c], c3 = color[c];
-                      p4 = d, t4 = type[d], c4 = color[d];
-                    }
-                  }
-                  del({a, b, c, d});
-                }
-              };
-              next(a + d, b + d);
-            };
-            if (a + 1 == b) {
-              {
-                static int8_t DA[] = {5, -1, -1, 5, 2, -1};
-                static int8_t DB[] = {-1, 5, 5, -1, 3, -1};
-                next(-ROW, DA[pat], DB[pbt], 0, 1);
-              }
-              {
-                static int8_t DA[] = {5, -1, -1, 5, 1, -1};
-                static int8_t DB[] = {-1, 5, 5, -1, 0, -1};
-                next(ROW, DA[pat], DB[pbt], 3, 2);
-              }
-            } else {
-              {
-                static int8_t DA[] = {4, 4, -1, -1, -1, 2};
-                static int8_t DB[] = {-1, -1, 4, 4, -1, 1};
-                next(-1, DA[pat], DB[pbt], 0, 3);
-              }
-              {
-                static int8_t DA[] = {4, 4, -1, -1, -1, 3};
-                static int8_t DB[] = {-1, -1, 4, 4, -1, 0};
-                next(1, DA[pat], DB[pbt], 1, 2);
-              }
-            }
-            put(a, pat, pac);
-            put(b, pbt, pbc);
-          }
+    int score = 0;
+    for (int l = 0; l < 10; ++l) {
+      {  // init
+        H = H_;
+        W = W_;
+        N = H * W;
+        C = 0;
+        memset(type, -1, sizeof(type));
+        memset(color, -1, sizeof(color));
+        memset(remain, 0, sizeof(remain));
+        for (string s : lights) {
+          int t = s[0] - '0';
+          int c = s[1] - 'a';
+          ++remain[t][c];
+          if (C < c + 1) C = c + 1;
         }
-        if (v > INT_MIN) {
-          del({p1, p2});
-          put(p1, t1, c1);
-          put(p2, t2, c2);
-          put(p3, t3, c3);
-          put(p4, t4, c4);
-          goto start;
+        ps = 0;
+        for (int i = 0; i < H + 2; ++i) {
+          type[i * ROW] = type[i * ROW + W + 1] = -2;
         }
-        for (int j = 0; j < MAX_X; ++j) {
-          if (type[j] < 0) continue;
-          if (get_random() & 1) continue;
-          int p = j;
-          int pt = type[p];
-          int np = p + D[pt][0] + D[pt][1];
-          auto next = [&](int nt, int8_t *DA, int8_t *DB) {
-            if (type[np] == -1) {
-              int a = p + D[pt][0];
-              int b = p + D[pt][1];
+        for (int i = 0; i < W + 2; ++i) {
+          type[i] = type[(H + 1) * ROW + i] = -2;
+        }
+      }
+      {  // solve
+        int p = (H >> 1) * ROW + (W >> 1);
+        put(p, 0);
+        put(p + 1, 1);
+        put(p + ROW, 3);
+        put(p + ROW + 1, 2);
+      start:
+        for (int o = 0; o < 10; ++o) {
+          int v = INT_MIN;
+          int p1, p2, p3, p4;
+          int t1, t2, t3, t4;
+          int c1, c2, c3, c4;
+          for (int j = 0; j < MAX_X; ++j) {
+            if (type[j] < 0) continue;
+            for (int k = 0; k < 2; ++k) {
+              int a = j;
+              int b = a + D[type[a]][k];
+              if (a > b) swap(a, b);
               int pat = type[a], pbt = type[b];
               int pac = color[a], pbc = color[b];
               del({a, b});
-              if (put(a, DA[pat]) && put(b, DB[pbt]) && put(np, nt)) {
-                del(p);
+              auto next = [&](int d, int at, int bt, int ct, int dt) {
+                auto next = [&](int c, int d) {
+                  if (type[c] == -1 && type[d] == -1) {
+                    if (put(a, at) && put(b, bt) && put(c, ct) && put(d, dt)) {
+                      int tv = 0;
+                      tv += remain[type[a]][color[a]];
+                      tv += remain[type[b]][color[b]];
+                      tv += remain[type[c]][color[c]];
+                      tv += remain[type[d]][color[d]];
+                      tv -= remain[type[pat]][color[pac]];
+                      tv -= remain[type[pbt]][color[pbc]];
+                      tv = (tv * 0x10000) + (get_random() & 0xffff);
+                      if (v < tv) {
+                        v = tv;
+                        p1 = a, t1 = type[a], c1 = color[a];
+                        p2 = b, t2 = type[b], c2 = color[b];
+                        p3 = c, t3 = type[c], c3 = color[c];
+                        p4 = d, t4 = type[d], c4 = color[d];
+                      }
+                    }
+                    del({a, b, c, d});
+                  }
+                };
+                next(a + d, b + d);
+              };
+              if (a + 1 == b) {
+                {
+                  static int8_t DA[] = {5, -1, -1, 5, 2, -1};
+                  static int8_t DB[] = {-1, 5, 5, -1, 3, -1};
+                  next(-ROW, DA[pat], DB[pbt], 0, 1);
+                }
+                {
+                  static int8_t DA[] = {5, -1, -1, 5, 1, -1};
+                  static int8_t DB[] = {-1, 5, 5, -1, 0, -1};
+                  next(ROW, DA[pat], DB[pbt], 3, 2);
+                }
               } else {
-                del({a, b});
-                put(a, pat, pac);
-                put(b, pbt, pbc);
+                {
+                  static int8_t DA[] = {4, 4, -1, -1, -1, 2};
+                  static int8_t DB[] = {-1, -1, 4, 4, -1, 1};
+                  next(-1, DA[pat], DB[pbt], 0, 3);
+                }
+                {
+                  static int8_t DA[] = {4, 4, -1, -1, -1, 3};
+                  static int8_t DB[] = {-1, -1, 4, 4, -1, 0};
+                  next(1, DA[pat], DB[pbt], 1, 2);
+                }
               }
+              put(a, pat, pac);
+              put(b, pbt, pbc);
             }
-          };
-          if (pt == 0) {
-            static int8_t DA[] = {-1, -1, 5, -1, 0, -1};
-            static int8_t DB[] = {-1, -1, 4, -1, -1, 0};
-            next(2, DA, DB);
-          } else if (pt == 2) {
-            static int8_t DA[] = {5, -1, -1, -1, 2, -1};
-            static int8_t DB[] = {4, -1, -1, -1, -1, 2};
-            next(0, DA, DB);
-          } else if (pt == 1) {
-            static int8_t DA[] = {-1, -1, -1, 5, 1, -1};
-            static int8_t DB[] = {-1, -1, -1, 4, -1, 1};
-            next(3, DA, DB);
-          } else if (pt == 3) {
-            static int8_t DA[] = {-1, 5, -1, -1, 3, -1};
-            static int8_t DB[] = {-1, 4, -1, -1, -1, 3};
-            next(1, DA, DB);
+          }
+          if (v > INT_MIN) {
+            del({p1, p2});
+            put(p1, t1, c1);
+            put(p2, t2, c2);
+            put(p3, t3, c3);
+            put(p4, t4, c4);
+            goto start;
+          }
+          for (int j = 0; j < MAX_X; ++j) {
+            if (type[j] < 0) continue;
+            if (get_random() & 1) continue;
+            int p = j;
+            int pt = type[p];
+            int np = p + D[pt][0] + D[pt][1];
+            auto next = [&](int nt, int8_t *DA, int8_t *DB) {
+              if (type[np] == -1) {
+                int a = p + D[pt][0];
+                int b = p + D[pt][1];
+                int pat = type[a], pbt = type[b];
+                int pac = color[a], pbc = color[b];
+                del({a, b});
+                if (put(a, DA[pat]) && put(b, DB[pbt]) && put(np, nt)) {
+                  del(p);
+                } else {
+                  del({a, b});
+                  put(a, pat, pac);
+                  put(b, pbt, pbc);
+                }
+              }
+            };
+            if (pt == 0) {
+              static int8_t DA[] = {-1, -1, 5, -1, 0, -1};
+              static int8_t DB[] = {-1, -1, 4, -1, -1, 0};
+              next(2, DA, DB);
+            } else if (pt == 2) {
+              static int8_t DA[] = {5, -1, -1, -1, 2, -1};
+              static int8_t DB[] = {4, -1, -1, -1, -1, 2};
+              next(0, DA, DB);
+            } else if (pt == 1) {
+              static int8_t DA[] = {-1, -1, -1, 5, 1, -1};
+              static int8_t DB[] = {-1, -1, -1, 4, -1, 1};
+              next(3, DA, DB);
+            } else if (pt == 3) {
+              static int8_t DA[] = {-1, 5, -1, -1, 3, -1};
+              static int8_t DB[] = {-1, 4, -1, -1, -1, 3};
+              next(1, DA, DB);
+            }
           }
         }
       }
       {
-        int sum = 0;
-        for (int i = 0; i < 6; ++i) {
-          for (int j = 0; j < 4; ++j) {
-            sum += remain[i][j];
+        for (int i = 0; i < MAX_X; ++i) {
+          if (type[i] > -1) {
+            int t = type[i];
+            if (t == 0) {
+              int x;
+              x = type[i + 1];
+              assert(x == 1 || x == 2 || x == 4);
+              x = type[i + ROW];
+              assert(x == 2 || x == 3 || x == 5);
+            }
+            if (t == 1) {
+              int x;
+              x = type[i - 1];
+              assert(x == 0 || x == 3 || x == 4);
+              x = type[i + ROW];
+              assert(x == 2 || x == 3 || x == 5);
+            }
+            if (t == 2) {
+              int x;
+              x = type[i - 1];
+              assert(x == 0 || x == 3 || x == 4);
+              x = type[i - ROW];
+              assert(x == 0 || x == 1 || x == 5);
+            }
+            if (t == 3) {
+              int x;
+              x = type[i + 1];
+              assert(x == 1 || x == 2 || x == 4);
+              x = type[i - ROW];
+              assert(x == 0 || x == 1 || x == 5);
+            }
+            if (t == 4) {
+              int x;
+              x = type[i + 1];
+              assert(x == 1 || x == 2 || x == 4);
+              x = type[i - 1];
+              assert(x == 0 || x == 3 || x == 4);
+            }
+            if (t == 5) {
+              int x;
+              x = type[i + ROW];
+              assert(x == 2 || x == 3 || x == 5);
+              x = type[i - ROW];
+              assert(x == 0 || x == 1 || x == 5);
+            }
           }
         }
+      }
+      {
+        int s = 0;
         for (int i = 0; i < MAX_X; ++i) {
-          if (type[i] > -1) ++sum;
+          if (type[i] > -1) ++s;
         }
-        assert(sum == N);
+        if (score < s) {
+          score = s;
+          memcpy(btype, type, sizeof(type));
+          memcpy(bcolor, color, sizeof(color));
+        }
       }
     }
     {  // output
@@ -249,9 +301,9 @@ class GarlandOfLights {
       for (int i = 0; i < H; ++i) {
         for (int j = 0; j < W; ++j) {
           int p = (i + 1) * ROW + (j + 1);
-          if (type[p] == -1) continue;
-          int t = type[p];
-          int c = color[p];
+          if (btype[p] == -1) continue;
+          int t = btype[p];
+          int c = bcolor[p];
           int x = position[t][c][size[t][c]++];
           ret[i * W + j] = x;
           used[x] = true;
