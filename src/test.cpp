@@ -224,6 +224,55 @@ class GarlandOfLights {
         }
       }
       {
+        for (int i = 0; i < MAX_X; ++i) {
+          if (type[i] > -1) {
+            int t = type[i];
+            if (t == 0) {
+              int x;
+              x = type[i + 1];
+              assert(x == 1 || x == 2 || x == 4);
+              x = type[i + ROW];
+              assert(x == 2 || x == 3 || x == 5);
+            }
+            if (t == 1) {
+              int x;
+              x = type[i - 1];
+              assert(x == 0 || x == 3 || x == 4);
+              x = type[i + ROW];
+              assert(x == 2 || x == 3 || x == 5);
+            }
+            if (t == 2) {
+              int x;
+              x = type[i - 1];
+              assert(x == 0 || x == 3 || x == 4);
+              x = type[i - ROW];
+              assert(x == 0 || x == 1 || x == 5);
+            }
+            if (t == 3) {
+              int x;
+              x = type[i + 1];
+              assert(x == 1 || x == 2 || x == 4);
+              x = type[i - ROW];
+              assert(x == 0 || x == 1 || x == 5);
+            }
+            if (t == 4) {
+              int x;
+              x = type[i + 1];
+              assert(x == 1 || x == 2 || x == 4);
+              x = type[i - 1];
+              assert(x == 0 || x == 3 || x == 4);
+            }
+            if (t == 5) {
+              int x;
+              x = type[i + ROW];
+              assert(x == 2 || x == 3 || x == 5);
+              x = type[i - ROW];
+              assert(x == 0 || x == 1 || x == 5);
+            }
+          }
+        }
+      }
+      {
         int s = 0;
         for (int i = 0; i < MAX_X; ++i) {
           if (type[i] > -1) ++s;
