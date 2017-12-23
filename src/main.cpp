@@ -125,6 +125,7 @@ class GarlandOfLights {
                     tv += remain[type[d]][color[d]];
                     tv -= remain[type[pat]][color[pac]];
                     tv -= remain[type[pbt]][color[pbc]];
+                    tv = (tv * 0x10000) + (get_random() & 0xffff);
                     if (v < tv) {
                       v = tv;
                       p1 = a, t1 = type[a], c1 = color[a];
