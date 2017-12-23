@@ -12,11 +12,11 @@ constexpr int MAX_X = ROW * ROW;
 constexpr int MAX_C = 4;
 constexpr int D[6][2] = {{1, ROW},  {-1, ROW}, {-1, -ROW},
                          {1, -ROW}, {-1, 1},   {-ROW, ROW}};
-int H, W, N;
+int H, W, N, C;
 int ps;
-int type[MAX_X];
-int color[MAX_X];
-int remain[6][MAX_C];
+int8_t type[MAX_X];
+int8_t color[MAX_X];
+int16_t remain[6][MAX_C];
 
 void print() {
   for (int i = 1; i <= H; ++i) {
@@ -35,7 +35,7 @@ void print() {
 
 int selectColor(int a, int b, int t) {
   int x = -1, m = 0;
-  for (int i = 0; i < MAX_C; ++i) {
+  for (int i = 0; i < C; ++i) {
     if (a == i || b == i || remain[t][i] < 1) continue;
     int v = (remain[t][i] << 16) + (get_random() & 0xff);
     if (m < v) {
@@ -79,11 +79,15 @@ class GarlandOfLights {
       H = H_;
       W = W_;
       N = H * W;
+      C = 0;
       memset(type, -1, sizeof(type));
       memset(color, -1, sizeof(color));
       memset(remain, 0, sizeof(remain));
       for (string s : lights) {
-        ++remain[s[0] - '0'][s[1] - 'a'];
+        int t = s[0] - '0';
+        int c = s[1] - 'a';
+        ++remain[t][c];
+        if (C < c + 1) C = c + 1;
       }
       ps = 0;
       for (int i = 0; i < H + 2; ++i) {
@@ -141,24 +145,24 @@ class GarlandOfLights {
             };
             if (a + 1 == b) {
               {
-                static int DA[] = {5, -1, -1, 5, 2, -1};
-                static int DB[] = {-1, 5, 5, -1, 3, -1};
+                static int8_t DA[] = {5, -1, -1, 5, 2, -1};
+                static int8_t DB[] = {-1, 5, 5, -1, 3, -1};
                 next(-ROW, DA[pat], DB[pbt], 0, 1);
               }
               {
-                static int DA[] = {5, -1, -1, 5, 1, -1};
-                static int DB[] = {-1, 5, 5, -1, 0, -1};
+                static int8_t DA[] = {5, -1, -1, 5, 1, -1};
+                static int8_t DB[] = {-1, 5, 5, -1, 0, -1};
                 next(ROW, DA[pat], DB[pbt], 3, 2);
               }
             } else {
               {
-                static int DA[] = {4, 4, -1, -1, -1, 2};
-                static int DB[] = {-1, -1, 4, 4, -1, 1};
+                static int8_t DA[] = {4, 4, -1, -1, -1, 2};
+                static int8_t DB[] = {-1, -1, 4, 4, -1, 1};
                 next(-1, DA[pat], DB[pbt], 0, 3);
               }
               {
-                static int DA[] = {4, 4, -1, -1, -1, 3};
-                static int DB[] = {-1, -1, 4, 4, -1, 0};
+                static int8_t DA[] = {4, 4, -1, -1, -1, 3};
+                static int8_t DB[] = {-1, -1, 4, 4, -1, 0};
                 next(1, DA[pat], DB[pbt], 1, 2);
               }
             }
@@ -180,7 +184,7 @@ class GarlandOfLights {
           int p = j;
           int pt = type[p];
           int np = p + D[pt][0] + D[pt][1];
-          auto next = [&](int nt, int *DA, int *DB) {
+          auto next = [&](int nt, int8_t *DA, int8_t *DB) {
             if (type[np] == -1) {
               int a = p + D[pt][0];
               int b = p + D[pt][1];
@@ -197,20 +201,20 @@ class GarlandOfLights {
             }
           };
           if (pt == 0) {
-            static int DA[] = {-1, -1, 5, -1, 0, -1};
-            static int DB[] = {-1, -1, 4, -1, -1, 0};
+            static int8_t DA[] = {-1, -1, 5, -1, 0, -1};
+            static int8_t DB[] = {-1, -1, 4, -1, -1, 0};
             next(2, DA, DB);
           } else if (pt == 2) {
-            static int DA[] = {5, -1, -1, -1, 2, -1};
-            static int DB[] = {4, -1, -1, -1, -1, 2};
+            static int8_t DA[] = {5, -1, -1, -1, 2, -1};
+            static int8_t DB[] = {4, -1, -1, -1, -1, 2};
             next(0, DA, DB);
           } else if (pt == 1) {
-            static int DA[] = {-1, -1, -1, 5, 1, -1};
-            static int DB[] = {-1, -1, -1, 4, -1, 1};
+            static int8_t DA[] = {-1, -1, -1, 5, 1, -1};
+            static int8_t DB[] = {-1, -1, -1, 4, -1, 1};
             next(3, DA, DB);
           } else if (pt == 3) {
-            static int DA[] = {-1, 5, -1, -1, 3, -1};
-            static int DB[] = {-1, 4, -1, -1, -1, 3};
+            static int8_t DA[] = {-1, 5, -1, -1, 3, -1};
+            static int8_t DB[] = {-1, 4, -1, -1, -1, 3};
             next(1, DA, DB);
           }
         }
