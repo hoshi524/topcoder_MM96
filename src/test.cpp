@@ -8,7 +8,7 @@ inline unsigned get_random() {
   return y ^= (y ^= (y ^= y << 13) >> 17) << 5;
 }
 
-constexpr int STATE_MAX = 1 << 3;
+constexpr int STATE_MAX = 1 << 4;
 constexpr int ROW = 1 << 7;
 constexpr int MAX_X = ROW * ROW;
 constexpr int MAX_C = 4;
@@ -132,14 +132,13 @@ struct State {
             if (put(a, at) && put(b, bt) && put(c, ct) && put(d, dt)) {
               ok = true;
               auto value = [&]() {
-                double x = 0;
+                ll x = 0;
+                auto f = [](int x) { return x < 1 ? 0 : ((x + 1) * x) >> 1; };
                 for (int i = 0; i < 6; ++i)
-                  for (int j = 0; j < C; ++j) {
-                    x -= pow(0.8, remain[i][j]);
-                  }
+                  for (int j = 0; j < C; ++j) x -= f(1000 - remain[i][j]);
                 return x;
               };
-              ll v = value() * ((ll)UINT_MAX << 16) + get_random();
+              ll v = value() * UINT_MAX + get_random();
               int in = nsize;
               while (in > 0 && neighbors[in - 1]->v < v) --in;
               if (in < STATE_MAX) {
