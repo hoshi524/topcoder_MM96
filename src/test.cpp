@@ -180,24 +180,25 @@ class GarlandOfLights {
               int pat = type[a], pbt = type[b];
               int pac = color[a], pbc = color[b];
               del({a, b});
-              auto next = [&](int d, int at, int bt, int ct, int dt) {
+              auto next = [&](int d, int8_t at, int8_t bt, int8_t ct,
+                              int8_t dt) {
                 auto next = [&](int c, int d) {
                   if (type[c] == -1 && type[d] == -1) {
                     if (put(a, at) && put(b, bt) && put(c, ct) && put(d, dt)) {
                       int tv = 0;
-                      tv += remain[type[a]][color[a]];
-                      tv += remain[type[b]][color[b]];
-                      tv += remain[type[c]][color[c]];
-                      tv += remain[type[d]][color[d]];
-                      tv -= remain[type[pat]][color[pac]];
-                      tv -= remain[type[pbt]][color[pbc]];
+                      tv += remain[at][color[a]];
+                      tv += remain[bt][color[b]];
+                      tv += remain[ct][color[c]];
+                      tv += remain[dt][color[d]];
+                      tv -= remain[pat][pac];
+                      tv -= remain[pbt][pbc];
                       tv = (tv * 0x10000) + (get_random() & 0xffff);
                       if (v < tv) {
                         v = tv;
-                        p1 = a, t1 = type[a], c1 = color[a];
-                        p2 = b, t2 = type[b], c2 = color[b];
-                        p3 = c, t3 = type[c], c3 = color[c];
-                        p4 = d, t4 = type[d], c4 = color[d];
+                        p1 = a, t1 = at, c1 = color[a];
+                        p2 = b, t2 = bt, c2 = color[b];
+                        p3 = c, t3 = ct, c3 = color[c];
+                        p4 = d, t4 = dt, c4 = color[d];
                       }
                     }
                     del({a, b, c, d});
