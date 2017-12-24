@@ -8,6 +8,7 @@ inline unsigned get_random() {
   return y ^= (y ^= (y ^= y << 13) >> 17) << 5;
 }
 
+constexpr int STATE_MAX = 1 << 3;
 constexpr int ROW = 1 << 7;
 constexpr int MAX_X = ROW * ROW;
 constexpr int MAX_C = 4;
@@ -23,8 +24,8 @@ struct Neighbors {
   int8_t t1, t2, t3, t4;
   int8_t c1, c2, c3, c4;
 };
-constexpr int NEIGHBORS_MAX = 1 << 17;
-Neighbors neighbors[NEIGHBORS_MAX + 1];
+Neighbors neighbors_[STATE_MAX];
+Neighbors *neighbors[STATE_MAX];
 int nsize;
 
 struct State {
@@ -55,7 +56,7 @@ struct State {
     put(p + ROW + 1, 2);
   }
 
-  void next(Neighbors *neighbors) {
+  void next(Neighbors **neighbors) {
     {
       int minR = INT_MAX, maxR = INT_MIN;
       int minC = INT_MAX, maxC = INT_MIN;
@@ -115,19 +116,10 @@ struct State {
       }
     }
     bool ok = false;
-    auto value = [&]() {
-      double x = 0;
-      for (int i = 0; i < 6; ++i)
-        for (int j = 0; j < C; ++j) {
-          x -= pow(0.8, remain[i][j]);
-        }
-      return x;
-    };
     for (int o = 0; o < 10; ++o) {
-      for (int j = 0; j < MAX_X; ++j) {
-        if (type[j] < 0) continue;
+      for (int a = 0; a < MAX_X; ++a) {
+        if (type[a] < 0) continue;
         for (int k = 0; k < 2; ++k) {
-          int a = j;
           int b = a + D[type[a]][k];
           if (a > b) continue;
           int pat = type[a], pbt = type[b];
@@ -139,14 +131,34 @@ struct State {
             if (type[c] != -1 || type[d] != -1) return;
             if (put(a, at) && put(b, bt) && put(c, ct) && put(d, dt)) {
               ok = true;
-              Neighbors &n = neighbors[nsize];
-              n.state = this;
-              n.v = value() * ((ll)UINT_MAX << 16) + get_random();
-              n.p1 = a, n.t1 = at, n.c1 = color[a];
-              n.p2 = b, n.t2 = bt, n.c2 = color[b];
-              n.p3 = c, n.t3 = ct, n.c3 = color[c];
-              n.p4 = d, n.t4 = dt, n.c4 = color[d];
-              ++nsize;
+              auto value = [&]() {
+                double x = 0;
+                for (int i = 0; i < 6; ++i)
+                  for (int j = 0; j < C; ++j) {
+                    x -= pow(0.8, remain[i][j]);
+                  }
+                return x;
+              };
+              ll v = value() * ((ll)UINT_MAX << 16) + get_random();
+              int in = nsize;
+              while (in > 0 && neighbors[in - 1]->v < v) --in;
+              if (in < STATE_MAX) {
+                Neighbors *n;
+                if (nsize == STATE_MAX) {
+                  n = neighbors[nsize - 1];
+                } else {
+                  n = neighbors[nsize++];
+                }
+                n->state = this;
+                n->v = v;
+                n->p1 = a, n->t1 = at, n->c1 = color[a];
+                n->p2 = b, n->t2 = bt, n->c2 = color[b];
+                n->p3 = c, n->t3 = ct, n->c3 = color[c];
+                n->p4 = d, n->t4 = dt, n->c4 = color[d];
+                for (int t = nsize - 1; t > in; --t)
+                  neighbors[t] = neighbors[t - 1];
+                neighbors[in] = n;
+              }
             }
             del({a, b, c, d});
           };
@@ -175,7 +187,6 @@ struct State {
           }
           put(a, pat, pac);
           put(b, pbt, pbc);
-          if (nsize >= NEIGHBORS_MAX) return;
         }
       }
       if (ok) return;
@@ -284,7 +295,6 @@ struct State {
     put(n.p4, n.t4, n.c4);
   }
 };
-constexpr int STATE_MAX = 1 << 3;
 State state[2][STATE_MAX];
 int ssize = 1;
 
@@ -296,6 +306,7 @@ class GarlandOfLights {
       W = W_;
       N = H * W;
       C = 0;
+      for (int i = 0; i < STATE_MAX; ++i) neighbors[i] = &neighbors_[i];
       state[0][0].init(lights);
     }
     State *best;
@@ -305,16 +316,14 @@ class GarlandOfLights {
         int b = (i + 1) & 1;
         best = &state[a][0];
         nsize = 0;
-        for (int j = 0; j < ssize && nsize < NEIGHBORS_MAX; ++j) {
+        for (int j = 0; j < ssize; ++j) {
           state[a][j].next(neighbors);
         }
         if (nsize == 0) break;
-        sort(neighbors, neighbors + nsize,
-             [](Neighbors &a, Neighbors &b) { return a.v > b.v; });
-        ssize = min(STATE_MAX, nsize);
+        ssize = nsize;
         for (int j = 0; j < ssize; ++j) {
-          memcpy(&state[b][j], neighbors[j].state, sizeof(state[b][j]));
-          state[b][j].neighbors(neighbors[j]);
+          memcpy(&state[b][j], neighbors[j]->state, sizeof(state[b][j]));
+          state[b][j].neighbors(*neighbors[j]);
         }
       }
     }
