@@ -13,7 +13,6 @@ constexpr int MAX_C = 4;
 constexpr int D[6][2] = {{1, ROW},  {-1, ROW}, {-1, -ROW},
                          {1, -ROW}, {-1, 1},   {-ROW, ROW}};
 int H, W, N, C;
-int ps;
 int8_t type[MAX_X];
 int8_t color[MAX_X];
 int8_t btype[MAX_X];
@@ -39,7 +38,7 @@ int selectColor(int a, int b, int t) {
   int x = -1, m = 0;
   for (int i = 0; i < C; ++i) {
     if (a == i || b == i || remain[t][i] < 1) continue;
-    int v = (remain[t][i] << 16) + (get_random() & 0xff);
+    int v = (remain[t][i] << 16) + (get_random() & 0xffff);
     if (m < v) {
       m = v;
       x = i;
@@ -51,6 +50,7 @@ int selectColor(int a, int b, int t) {
 bool put(int p, int t, int c) {
   type[p] = t;
   color[p] = c;
+  assert(remain[t][c] > 0);
   --remain[t][c];
 }
 
@@ -92,7 +92,6 @@ class GarlandOfLights {
           ++remain[t][c];
           if (C < c + 1) C = c + 1;
         }
-        ps = 0;
         for (int i = 0; i < H + 2; ++i) {
           type[i * ROW] = type[i * ROW + W + 1] = -2;
         }
@@ -108,6 +107,64 @@ class GarlandOfLights {
         put(p + ROW + 1, 2);
       start:
         for (int o = 0; o < 10; ++o) {
+          {
+            int minR = INT_MAX, maxR = INT_MIN;
+            int minC = INT_MAX, maxC = INT_MIN;
+            for (int i = 1; i <= H; ++i) {
+              for (int j = 1; j <= W; ++j) {
+                int p = i * ROW + j;
+                if (type[p] == -1) continue;
+                if (minC > i) minC = i;
+                if (maxC < i) maxC = i;
+                if (minR > j) minR = j;
+                if (maxR < j) maxR = j;
+              }
+            }
+            if (minR == 1 && maxR < W) {
+              for (int i = 1; i <= H; ++i) {
+                for (int j = W; j > 1; --j) {
+                  int p = i * ROW + j;
+                  type[p] = type[p - 1];
+                  color[p] = color[p - 1];
+                  type[p - 1] = -1;
+                  color[p - 1] = -1;
+                }
+              }
+            }
+            if (minR > 1 && maxR == W) {
+              for (int i = 1; i <= H; ++i) {
+                for (int j = 1; j < W; ++j) {
+                  int p = i * ROW + j;
+                  type[p] = type[p + 1];
+                  color[p] = color[p + 1];
+                  type[p + 1] = -1;
+                  color[p + 1] = -1;
+                }
+              }
+            }
+            if (minC == 1 && maxC < H) {
+              for (int i = H; i > 1; --i) {
+                for (int j = 1; j <= W; ++j) {
+                  int p = i * ROW + j;
+                  type[p] = type[p - ROW];
+                  color[p] = color[p - ROW];
+                  type[p - ROW] = -1;
+                  color[p - ROW] = -1;
+                }
+              }
+            }
+            if (minC > 1 && maxC == H) {
+              for (int i = 1; i < H; ++i) {
+                for (int j = 1; j <= W; ++j) {
+                  int p = i * ROW + j;
+                  type[p] = type[p + ROW];
+                  color[p] = color[p + ROW];
+                  type[p + ROW] = -1;
+                  color[p + ROW] = -1;
+                }
+              }
+            }
+          }
           int v = INT_MIN;
           int p1, p2, p3, p4;
           int t1, t2, t3, t4;
@@ -121,24 +178,25 @@ class GarlandOfLights {
               int pat = type[a], pbt = type[b];
               int pac = color[a], pbc = color[b];
               del({a, b});
-              auto next = [&](int d, int at, int bt, int ct, int dt) {
+              auto next = [&](int d, int8_t at, int8_t bt, int8_t ct,
+                              int8_t dt) {
                 auto next = [&](int c, int d) {
                   if (type[c] == -1 && type[d] == -1) {
                     if (put(a, at) && put(b, bt) && put(c, ct) && put(d, dt)) {
                       int tv = 0;
-                      tv += remain[type[a]][color[a]];
-                      tv += remain[type[b]][color[b]];
-                      tv += remain[type[c]][color[c]];
-                      tv += remain[type[d]][color[d]];
-                      tv -= remain[type[pat]][color[pac]];
-                      tv -= remain[type[pbt]][color[pbc]];
+                      tv += remain[at][color[a]];
+                      tv += remain[bt][color[b]];
+                      tv += remain[ct][color[c]];
+                      tv += remain[dt][color[d]];
+                      tv -= remain[pat][pac];
+                      tv -= remain[pbt][pbc];
                       tv = (tv * 0x10000) + (get_random() & 0xffff);
                       if (v < tv) {
                         v = tv;
-                        p1 = a, t1 = type[a], c1 = color[a];
-                        p2 = b, t2 = type[b], c2 = color[b];
-                        p3 = c, t3 = type[c], c3 = color[c];
-                        p4 = d, t4 = type[d], c4 = color[d];
+                        p1 = a, t1 = at, c1 = color[a];
+                        p2 = b, t2 = bt, c2 = color[b];
+                        p3 = c, t3 = ct, c3 = color[c];
+                        p4 = d, t4 = dt, c4 = color[d];
                       }
                     }
                     del({a, b, c, d});
@@ -271,6 +329,18 @@ class GarlandOfLights {
             }
           }
         }
+      }
+      {
+        int sum = 0;
+        for (int i = 0; i < 6; ++i) {
+          for (int j = 0; j < 4; ++j) {
+            sum += remain[i][j];
+          }
+        }
+        for (int i = 0; i < MAX_X; ++i) {
+          if (type[i] > -1) ++sum;
+        }
+        assert(sum == N);
       }
       {
         int s = 0;

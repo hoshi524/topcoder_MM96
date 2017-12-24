@@ -55,7 +55,7 @@ for i in range(num_worker_threads):
 
 
 N = 100
-for seed in range(1, N):
+for seed in range(3, N):
     q.put(seed)
 
 # block until all tasks are done
