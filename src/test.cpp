@@ -1,6 +1,7 @@
 #include <bits/stdc++.h>
 #include <sys/time.h>
 using namespace std;
+typedef long long ll;
 
 inline unsigned get_random() {
   static unsigned y = 2463534242;
@@ -17,7 +18,7 @@ int H, W, N, C;
 struct State;
 struct Neighbors {
   State *state;
-  int v;
+  ll v;
   int16_t p1, p2, p3, p4;
   int8_t t1, t2, t3, t4;
   int8_t c1, c2, c3, c4;
@@ -114,6 +115,14 @@ struct State {
       }
     }
     bool ok = false;
+    auto value = [&]() {
+      double x = 0;
+      for (int i = 0; i < 6; ++i)
+        for (int j = 0; j < C; ++j) {
+          x -= pow(0.8, remain[i][j]);
+        }
+      return x;
+    };
     for (int o = 0; o < 10; ++o) {
       for (int j = 0; j < MAX_X; ++j) {
         if (type[j] < 0) continue;
@@ -130,17 +139,9 @@ struct State {
             if (type[c] != -1 || type[d] != -1) return;
             if (put(a, at) && put(b, bt) && put(c, ct) && put(d, dt)) {
               ok = true;
-              int tv = 0;
-              tv += remain[at][color[a]];
-              tv += remain[bt][color[b]];
-              tv += remain[ct][color[c]];
-              tv += remain[dt][color[d]];
-              tv -= remain[pat][pac];
-              tv -= remain[pbt][pbc];
-              tv = (tv * 0x10000) + (get_random() & 0xffff);
               Neighbors &n = neighbors[nsize];
               n.state = this;
-              n.v = tv;
+              n.v = value() * ((ll)UINT_MAX << 16) + get_random();
               n.p1 = a, n.t1 = at, n.c1 = color[a];
               n.p2 = b, n.t2 = bt, n.c2 = color[b];
               n.p3 = c, n.t3 = ct, n.c3 = color[c];
