@@ -133,7 +133,7 @@ struct State {
               ok = true;
               auto value = [&]() {
                 ll x = 0;
-                auto f = [](int x) { return x < 1 ? 0 : ((x + 1) * x) >> 1; };
+                auto f = [](int x) { return x < 1 ? 0 : x * x; };
                 for (int i = 0; i < 6; ++i)
                   for (int j = 0; j < C; ++j) x -= f(1000 - remain[i][j]);
                 return x;
