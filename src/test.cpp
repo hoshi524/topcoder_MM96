@@ -120,7 +120,7 @@ struct State {
         for (int k = 0; k < 2; ++k) {
           int a = j;
           int b = a + D[type[a]][k];
-          if (a > b) swap(a, b);
+          if (a > b) continue;
           int pat = type[a], pbt = type[b];
           int pac = color[a], pbc = color[b];
           del({a, b});
@@ -283,7 +283,7 @@ struct State {
     put(n.p4, n.t4, n.c4);
   }
 };
-constexpr int STATE_MAX = 1 << 4;
+constexpr int STATE_MAX = 1 << 3;
 State state[2][STATE_MAX];
 int ssize = 1;
 
