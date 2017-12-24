@@ -23,7 +23,7 @@ struct Neighbors {
   int8_t c1, c2, c3, c4;
 };
 constexpr int NEIGHBORS_MAX = 1 << 17;
-Neighbors neighbors[NEIGHBORS_MAX + 10];
+Neighbors neighbors[NEIGHBORS_MAX + 1];
 int nsize;
 
 struct State {
@@ -124,32 +124,30 @@ struct State {
           int pat = type[a], pbt = type[b];
           int pac = color[a], pbc = color[b];
           del({a, b});
-          auto next = [&](int d, int at, int bt, int ct, int dt) {
-            auto next = [&](int c, int d) {
-              if (type[c] == -1 && type[d] == -1) {
-                if (put(a, at) && put(b, bt) && put(c, ct) && put(d, dt)) {
-                  ok = true;
-                  int tv = 0;
-                  tv += remain[at][color[a]];
-                  tv += remain[bt][color[b]];
-                  tv += remain[ct][color[c]];
-                  tv += remain[dt][color[d]];
-                  tv -= remain[pat][pac];
-                  tv -= remain[pbt][pbc];
-                  tv = (tv * 0x10000) + (get_random() & 0xffff);
-                  Neighbors &n = neighbors[nsize];
-                  n.state = this;
-                  n.v = tv;
-                  n.p1 = a, n.t1 = type[a], n.c1 = color[a];
-                  n.p2 = b, n.t2 = type[b], n.c2 = color[b];
-                  n.p3 = c, n.t3 = type[c], n.c3 = color[c];
-                  n.p4 = d, n.t4 = type[d], n.c4 = color[d];
-                  ++nsize;
-                }
-                del({a, b, c, d});
-              }
-            };
-            next(a + d, b + d);
+          auto next = [&](int m, int at, int bt, int ct, int dt) {
+            int c = a + m;
+            int d = b + m;
+            if (type[c] != -1 || type[d] != -1) return;
+            if (put(a, at) && put(b, bt) && put(c, ct) && put(d, dt)) {
+              ok = true;
+              int tv = 0;
+              tv += remain[at][color[a]];
+              tv += remain[bt][color[b]];
+              tv += remain[ct][color[c]];
+              tv += remain[dt][color[d]];
+              tv -= remain[pat][pac];
+              tv -= remain[pbt][pbc];
+              tv = (tv * 0x10000) + (get_random() & 0xffff);
+              Neighbors &n = neighbors[nsize];
+              n.state = this;
+              n.v = tv;
+              n.p1 = a, n.t1 = at, n.c1 = color[a];
+              n.p2 = b, n.t2 = bt, n.c2 = color[b];
+              n.p3 = c, n.t3 = ct, n.c3 = color[c];
+              n.p4 = d, n.t4 = dt, n.c4 = color[d];
+              ++nsize;
+            }
+            del({a, b, c, d});
           };
           if (a + 1 == b) {
             {
