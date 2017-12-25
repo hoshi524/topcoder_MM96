@@ -8,13 +8,13 @@ inline unsigned get_random() {
   return y ^= (y ^= (y ^= y << 13) >> 17) << 5;
 }
 
-constexpr int STATE_MAX = 1 << 4;
+constexpr int STATE_MAX = 1 << 9;
 constexpr int ROW = 1 << 7;
 constexpr int MAX_X = ROW * 102;
 constexpr int MAX_C = 4;
 constexpr int D[6][2] = {{1, ROW},  {-1, ROW}, {-1, -ROW},
                          {1, -ROW}, {-1, 1},   {-ROW, ROW}};
-int H, W, N, C;
+int H, W, N, C, beam;
 
 struct State;
 struct Neighbors {
@@ -139,7 +139,7 @@ struct State {
                 return x;
               };
               ll v = value() * UINT_MAX + get_random();
-              if (nsize < STATE_MAX || neighbors[nsize - 1]->v < v) {
+              if (nsize < beam || neighbors[nsize - 1]->v < v) {
                 int min = -1, max = nsize;
                 while (max - min > 1) {
                   int t = (max + min) >> 1;
@@ -149,7 +149,7 @@ struct State {
                     min = t;
                 }
                 Neighbors *n;
-                if (nsize == STATE_MAX) {
+                if (nsize == beam) {
                   n = neighbors[nsize - 1];
                 } else {
                   n = neighbors[nsize++];
@@ -311,7 +311,8 @@ class GarlandOfLights {
       W = W_;
       N = H * W;
       C = 0;
-      for (int i = 0; i < STATE_MAX; ++i) neighbors[i] = &neighbors_[i];
+      beam = min((1 << 4) * 10000 / N, STATE_MAX);
+      for (int i = 0; i < beam; ++i) neighbors[i] = &neighbors_[i];
       state[0][0].init(lights);
     }
     State *best;
