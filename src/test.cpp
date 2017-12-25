@@ -139,9 +139,15 @@ struct State {
                 return x;
               };
               ll v = value() * UINT_MAX + get_random();
-              int in = nsize;
-              while (in > 0 && neighbors[in - 1]->v < v) --in;
-              if (in < STATE_MAX) {
+              if (nsize < STATE_MAX || neighbors[nsize - 1]->v < v) {
+                int min = -1, max = nsize;
+                while (max - min > 1) {
+                  int t = (max + min) >> 1;
+                  if (neighbors[t]->v < v)
+                    max = t;
+                  else
+                    min = t;
+                }
                 Neighbors *n;
                 if (nsize == STATE_MAX) {
                   n = neighbors[nsize - 1];
@@ -154,9 +160,9 @@ struct State {
                 n->p2 = b, n->t2 = bt, n->c2 = color[b];
                 n->p3 = c, n->t3 = ct, n->c3 = color[c];
                 n->p4 = d, n->t4 = dt, n->c4 = color[d];
-                for (int t = nsize - 1; t > in; --t)
+                for (int t = nsize - 1; t > max; --t)
                   neighbors[t] = neighbors[t - 1];
-                neighbors[in] = n;
+                neighbors[max] = n;
               }
             }
             del({a, b, c, d});
