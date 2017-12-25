@@ -62,7 +62,7 @@ struct State {
       int minC = INT_MAX, maxC = INT_MIN;
       for (int i = 1; i <= H; ++i) {
         for (int j = 1; j <= W; ++j) {
-          int p = i * ROW + j;
+          int p = (i << 7) | j;
           if (type[p] == -1) continue;
           if (minC > i) minC = i;
           if (maxC < i) maxC = i;
@@ -73,7 +73,7 @@ struct State {
       if (minR == 1 && maxR < W) {
         for (int i = 1; i <= H; ++i) {
           for (int j = W; j > 1; --j) {
-            int p = i * ROW + j;
+            int p = (i << 7) | j;
             type[p] = type[p - 1];
             color[p] = color[p - 1];
             type[p - 1] = -1;
@@ -84,7 +84,7 @@ struct State {
       if (minR > 1 && maxR == W) {
         for (int i = 1; i <= H; ++i) {
           for (int j = 1; j < W; ++j) {
-            int p = i * ROW + j;
+            int p = (i << 7) | j;
             type[p] = type[p + 1];
             color[p] = color[p + 1];
             type[p + 1] = -1;
@@ -95,7 +95,7 @@ struct State {
       if (minC == 1 && maxC < H) {
         for (int i = H; i > 1; --i) {
           for (int j = 1; j <= W; ++j) {
-            int p = i * ROW + j;
+            int p = (i << 7) | j;
             type[p] = type[p - ROW];
             color[p] = color[p - ROW];
             type[p - ROW] = -1;
@@ -106,7 +106,7 @@ struct State {
       if (minC > 1 && maxC == H) {
         for (int i = 1; i < H; ++i) {
           for (int j = 1; j <= W; ++j) {
-            int p = i * ROW + j;
+            int p = (i << 7) | j;
             type[p] = type[p + ROW];
             color[p] = color[p + ROW];
             type[p + ROW] = -1;
@@ -117,122 +117,127 @@ struct State {
     }
     bool ok = false;
     for (int o = 0; o < 10; ++o) {
-      for (int a = 0; a < MAX_X; ++a) {
-        if (type[a] < 0) continue;
-        for (int k = 0; k < 2; ++k) {
-          int b = a + D[type[a]][k];
-          if (a > b) continue;
-          int pat = type[a], pac = color[a];
-          int pbt = type[b], pbc = color[b];
-          del({a, b});
-          auto next = [&](int m, int at, int bt, int ct, int dt) {
-            int c = a + m;
-            int d = b + m;
-            if (type[c] != -1 || type[d] != -1) return;
-            if (put(a, at) && put(b, bt) && put(c, ct) && put(d, dt)) {
-              ok = true;
-              auto value = [&]() {
-                ll x = 0;
-                auto f = [](int x) { return x < 1 ? 0 : x * x; };
-                for (int i = 0; i < 6; ++i)
-                  for (int j = 0; j < C; ++j) x -= f(200 - remain[i][j]);
-                return x;
-              };
-              ll v = value() * UINT_MAX + get_random();
-              if (nsize < beam || neighbors[nsize - 1]->v < v) {
-                int min = -1, max = nsize;
-                while (max - min > 1) {
-                  int t = (max + min) >> 1;
-                  if (neighbors[t]->v < v)
-                    max = t;
-                  else
-                    min = t;
+      for (int i = 1; i <= H; ++i) {
+        for (int j = 1; j <= W; ++j) {
+          int a = (i << 7) | j;
+          if (type[a] < 0) continue;
+          for (int k = 0; k < 2; ++k) {
+            int b = a + D[type[a]][k];
+            if (a > b) continue;
+            int pat = type[a], pac = color[a];
+            int pbt = type[b], pbc = color[b];
+            del({a, b});
+            auto next = [&](int m, int at, int bt, int ct, int dt) {
+              int c = a + m;
+              int d = b + m;
+              if (type[c] != -1 || type[d] != -1) return;
+              if (put(a, at) && put(b, bt) && put(c, ct) && put(d, dt)) {
+                ok = true;
+                auto value = [&]() {
+                  ll x = 0;
+                  auto f = [](int x) { return x < 1 ? 0 : x * x; };
+                  for (int i = 0; i < 6; ++i)
+                    for (int j = 0; j < C; ++j) x -= f(200 - remain[i][j]);
+                  return x;
+                };
+                ll v = value() * UINT_MAX + get_random();
+                if (nsize < beam || neighbors[nsize - 1]->v < v) {
+                  int min = -1, max = nsize;
+                  while (max - min > 1) {
+                    int t = (max + min) >> 1;
+                    if (neighbors[t]->v < v)
+                      max = t;
+                    else
+                      min = t;
+                  }
+                  Neighbors *n;
+                  if (nsize == beam) {
+                    n = neighbors[nsize - 1];
+                  } else {
+                    n = neighbors[nsize++];
+                  }
+                  n->state = this;
+                  n->v = v;
+                  n->p1 = a, n->t1 = at, n->c1 = color[a];
+                  n->p2 = b, n->t2 = bt, n->c2 = color[b];
+                  n->p3 = c, n->t3 = ct, n->c3 = color[c];
+                  n->p4 = d, n->t4 = dt, n->c4 = color[d];
+                  for (int t = nsize - 1; t > max; --t)
+                    neighbors[t] = neighbors[t - 1];
+                  neighbors[max] = n;
                 }
-                Neighbors *n;
-                if (nsize == beam) {
-                  n = neighbors[nsize - 1];
-                } else {
-                  n = neighbors[nsize++];
-                }
-                n->state = this;
-                n->v = v;
-                n->p1 = a, n->t1 = at, n->c1 = color[a];
-                n->p2 = b, n->t2 = bt, n->c2 = color[b];
-                n->p3 = c, n->t3 = ct, n->c3 = color[c];
-                n->p4 = d, n->t4 = dt, n->c4 = color[d];
-                for (int t = nsize - 1; t > max; --t)
-                  neighbors[t] = neighbors[t - 1];
-                neighbors[max] = n;
+              }
+              del({a, b, c, d});
+            };
+            if (a + 1 == b) {
+              {
+                static int8_t DA[] = {5, -1, -1, 5, 2, -1};
+                static int8_t DB[] = {-1, 5, 5, -1, 3, -1};
+                next(-ROW, DA[pat], DB[pbt], 0, 1);
+              }
+              {
+                static int8_t DA[] = {5, -1, -1, 5, 1, -1};
+                static int8_t DB[] = {-1, 5, 5, -1, 0, -1};
+                next(ROW, DA[pat], DB[pbt], 3, 2);
+              }
+            } else {
+              {
+                static int8_t DA[] = {4, 4, -1, -1, -1, 2};
+                static int8_t DB[] = {-1, -1, 4, 4, -1, 1};
+                next(-1, DA[pat], DB[pbt], 0, 3);
+              }
+              {
+                static int8_t DA[] = {4, 4, -1, -1, -1, 3};
+                static int8_t DB[] = {-1, -1, 4, 4, -1, 0};
+                next(1, DA[pat], DB[pbt], 1, 2);
               }
             }
-            del({a, b, c, d});
-          };
-          if (a + 1 == b) {
-            {
-              static int8_t DA[] = {5, -1, -1, 5, 2, -1};
-              static int8_t DB[] = {-1, 5, 5, -1, 3, -1};
-              next(-ROW, DA[pat], DB[pbt], 0, 1);
-            }
-            {
-              static int8_t DA[] = {5, -1, -1, 5, 1, -1};
-              static int8_t DB[] = {-1, 5, 5, -1, 0, -1};
-              next(ROW, DA[pat], DB[pbt], 3, 2);
-            }
-          } else {
-            {
-              static int8_t DA[] = {4, 4, -1, -1, -1, 2};
-              static int8_t DB[] = {-1, -1, 4, 4, -1, 1};
-              next(-1, DA[pat], DB[pbt], 0, 3);
-            }
-            {
-              static int8_t DA[] = {4, 4, -1, -1, -1, 3};
-              static int8_t DB[] = {-1, -1, 4, 4, -1, 0};
-              next(1, DA[pat], DB[pbt], 1, 2);
-            }
+            put(a, pat, pac);
+            put(b, pbt, pbc);
           }
-          put(a, pat, pac);
-          put(b, pbt, pbc);
         }
       }
       if (ok) return;
-      for (int j = 0; j < MAX_X; ++j) {
-        if (type[j] < 0) continue;
-        if (get_random() & 1) continue;
-        int p = j;
-        int pt = type[p];
-        int np = p + D[pt][0] + D[pt][1];
-        auto next = [&](int nt, int8_t *DA, int8_t *DB) {
-          if (type[np] == -1) {
-            int a = p + D[pt][0];
-            int b = p + D[pt][1];
-            int pat = type[a], pbt = type[b];
-            int pac = color[a], pbc = color[b];
-            del({a, b});
-            if (put(a, DA[pat]) && put(b, DB[pbt]) && put(np, nt)) {
-              del(p);
-            } else {
+      for (int i = 1; i <= H; ++i) {
+        for (int j = 1; j <= W; ++j) {
+          int p = (i << 7) | j;
+          if (type[p] < 0) continue;
+          if (get_random() & 1) continue;
+          int pt = type[p];
+          int np = p + D[pt][0] + D[pt][1];
+          auto next = [&](int nt, int8_t *DA, int8_t *DB) {
+            if (type[np] == -1) {
+              int a = p + D[pt][0];
+              int b = p + D[pt][1];
+              int pat = type[a], pbt = type[b];
+              int pac = color[a], pbc = color[b];
               del({a, b});
-              put(a, pat, pac);
-              put(b, pbt, pbc);
+              if (put(a, DA[pat]) && put(b, DB[pbt]) && put(np, nt)) {
+                del(p);
+              } else {
+                del({a, b});
+                put(a, pat, pac);
+                put(b, pbt, pbc);
+              }
             }
+          };
+          if (pt == 0) {
+            static int8_t DA[] = {-1, -1, 5, -1, 0, -1};
+            static int8_t DB[] = {-1, -1, 4, -1, -1, 0};
+            next(2, DA, DB);
+          } else if (pt == 2) {
+            static int8_t DA[] = {5, -1, -1, -1, 2, -1};
+            static int8_t DB[] = {4, -1, -1, -1, -1, 2};
+            next(0, DA, DB);
+          } else if (pt == 1) {
+            static int8_t DA[] = {-1, -1, -1, 5, 1, -1};
+            static int8_t DB[] = {-1, -1, -1, 4, -1, 1};
+            next(3, DA, DB);
+          } else if (pt == 3) {
+            static int8_t DA[] = {-1, 5, -1, -1, 3, -1};
+            static int8_t DB[] = {-1, 4, -1, -1, -1, 3};
+            next(1, DA, DB);
           }
-        };
-        if (pt == 0) {
-          static int8_t DA[] = {-1, -1, 5, -1, 0, -1};
-          static int8_t DB[] = {-1, -1, 4, -1, -1, 0};
-          next(2, DA, DB);
-        } else if (pt == 2) {
-          static int8_t DA[] = {5, -1, -1, -1, 2, -1};
-          static int8_t DB[] = {4, -1, -1, -1, -1, 2};
-          next(0, DA, DB);
-        } else if (pt == 1) {
-          static int8_t DA[] = {-1, -1, -1, 5, 1, -1};
-          static int8_t DB[] = {-1, -1, -1, 4, -1, 1};
-          next(3, DA, DB);
-        } else if (pt == 3) {
-          static int8_t DA[] = {-1, 5, -1, -1, 3, -1};
-          static int8_t DB[] = {-1, 4, -1, -1, -1, 3};
-          next(1, DA, DB);
         }
       }
     }
