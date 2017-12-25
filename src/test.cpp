@@ -10,7 +10,7 @@ inline unsigned get_random() {
 
 constexpr int STATE_MAX = 1 << 4;
 constexpr int ROW = 1 << 7;
-constexpr int MAX_X = ROW * ROW;
+constexpr int MAX_X = ROW * 102;
 constexpr int MAX_C = 4;
 constexpr int D[6][2] = {{1, ROW},  {-1, ROW}, {-1, -ROW},
                          {1, -ROW}, {-1, 1},   {-ROW, ROW}};
