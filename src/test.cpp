@@ -135,7 +135,7 @@ struct State {
                 ll x = 0;
                 auto f = [](int x) { return x < 1 ? 0 : x * x; };
                 for (int i = 0; i < 6; ++i)
-                  for (int j = 0; j < C; ++j) x -= f(1000 - remain[i][j]);
+                  for (int j = 0; j < C; ++j) x -= f(200 - remain[i][j]);
                 return x;
               };
               ll v = value() * UINT_MAX + get_random();
