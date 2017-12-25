@@ -122,8 +122,8 @@ struct State {
         for (int k = 0; k < 2; ++k) {
           int b = a + D[type[a]][k];
           if (a > b) continue;
-          int pat = type[a], pbt = type[b];
-          int pac = color[a], pbc = color[b];
+          int pat = type[a], pac = color[a];
+          int pbt = type[b], pbc = color[b];
           del({a, b});
           auto next = [&](int m, int at, int bt, int ct, int dt) {
             int c = a + m;
