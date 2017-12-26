@@ -449,9 +449,9 @@ class GarlandOfLights {
             const int *d = D[type[t]];
             del(t);
             if (use[t + d[k]]) {
-              t = t + d[k];
+              t += d[k];
             } else {
-              t = t + d[1 - k];
+              t += d[1 - k];
             }
           }
           del({a, b});
