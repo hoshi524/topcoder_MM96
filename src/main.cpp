@@ -8,7 +8,7 @@ inline unsigned get_random() {
 }
 
 constexpr int ROW = 1 << 7;
-constexpr int MAX_X = ROW * ROW;
+constexpr int MAX_X = ROW * 102;
 constexpr int MAX_C = 4;
 constexpr int D[6][2] = {{1, ROW},  {-1, ROW}, {-1, -ROW},
                          {1, -ROW}, {-1, 1},   {-ROW, ROW}};
@@ -47,7 +47,7 @@ int selectColor(int a, int b, int t) {
   return x;
 }
 
-bool put(int p, int t, int c) {
+inline void put(int p, int t, int c) {
   type[p] = t;
   color[p] = c;
   assert(remain[t][c] > 0);
@@ -112,7 +112,7 @@ class GarlandOfLights {
             int minC = INT_MAX, maxC = INT_MIN;
             for (int i = 1; i <= H; ++i) {
               for (int j = 1; j <= W; ++j) {
-                int p = i * ROW + j;
+                int p = (i << 7) | j;
                 if (type[p] == -1) continue;
                 if (minC > i) minC = i;
                 if (maxC < i) maxC = i;
@@ -123,7 +123,7 @@ class GarlandOfLights {
             if (minR == 1 && maxR < W) {
               for (int i = 1; i <= H; ++i) {
                 for (int j = W; j > 1; --j) {
-                  int p = i * ROW + j;
+                  int p = (i << 7) | j;
                   type[p] = type[p - 1];
                   color[p] = color[p - 1];
                   type[p - 1] = -1;
@@ -134,7 +134,7 @@ class GarlandOfLights {
             if (minR > 1 && maxR == W) {
               for (int i = 1; i <= H; ++i) {
                 for (int j = 1; j < W; ++j) {
-                  int p = i * ROW + j;
+                  int p = (i << 7) | j;
                   type[p] = type[p + 1];
                   color[p] = color[p + 1];
                   type[p + 1] = -1;
@@ -145,7 +145,7 @@ class GarlandOfLights {
             if (minC == 1 && maxC < H) {
               for (int i = H; i > 1; --i) {
                 for (int j = 1; j <= W; ++j) {
-                  int p = i * ROW + j;
+                  int p = (i << 7) | j;
                   type[p] = type[p - ROW];
                   color[p] = color[p - ROW];
                   type[p - ROW] = -1;
@@ -156,7 +156,7 @@ class GarlandOfLights {
             if (minC > 1 && maxC == H) {
               for (int i = 1; i < H; ++i) {
                 for (int j = 1; j <= W; ++j) {
-                  int p = i * ROW + j;
+                  int p = (i << 7) | j;
                   type[p] = type[p + ROW];
                   color[p] = color[p + ROW];
                   type[p + ROW] = -1;
@@ -169,18 +169,21 @@ class GarlandOfLights {
           int p1, p2, p3, p4;
           int t1, t2, t3, t4;
           int c1, c2, c3, c4;
-          for (int j = 0; j < MAX_X; ++j) {
-            if (type[j] < 0) continue;
-            for (int k = 0; k < 2; ++k) {
-              int a = j;
-              int b = a + D[type[a]][k];
-              if (a > b) swap(a, b);
-              int pat = type[a], pbt = type[b];
-              int pac = color[a], pbc = color[b];
-              del({a, b});
-              auto next = [&](int d, int8_t at, int8_t bt, int8_t ct,
-                              int8_t dt) {
-                auto next = [&](int c, int d) {
+          for (int i = 1; i <= H; ++i) {
+            for (int j = 1; j <= W; ++j) {
+              int p = (i << 7) | j;
+              if (type[p] < 0) continue;
+              for (int k = 0; k < 2; ++k) {
+                int a = p;
+                int b = a + D[type[a]][k];
+                if (a > b) swap(a, b);
+                int pat = type[a], pbt = type[b];
+                int pac = color[a], pbc = color[b];
+                del({a, b});
+                auto next = [&](int m, int8_t at, int8_t bt, int8_t ct,
+                                int8_t dt) {
+                  int c = a + m;
+                  int d = b + m;
                   if (type[c] == -1 && type[d] == -1) {
                     if (put(a, at) && put(b, bt) && put(c, ct) && put(d, dt)) {
                       int tv = 0;
@@ -202,33 +205,32 @@ class GarlandOfLights {
                     del({a, b, c, d});
                   }
                 };
-                next(a + d, b + d);
-              };
-              if (a + 1 == b) {
-                {
-                  static int8_t DA[] = {5, -1, -1, 5, 2, -1};
-                  static int8_t DB[] = {-1, 5, 5, -1, 3, -1};
-                  next(-ROW, DA[pat], DB[pbt], 0, 1);
+                if (a + 1 == b) {
+                  {
+                    static int8_t DA[] = {5, -1, -1, 5, 2, -1};
+                    static int8_t DB[] = {-1, 5, 5, -1, 3, -1};
+                    next(-ROW, DA[pat], DB[pbt], 0, 1);
+                  }
+                  {
+                    static int8_t DA[] = {5, -1, -1, 5, 1, -1};
+                    static int8_t DB[] = {-1, 5, 5, -1, 0, -1};
+                    next(ROW, DA[pat], DB[pbt], 3, 2);
+                  }
+                } else {
+                  {
+                    static int8_t DA[] = {4, 4, -1, -1, -1, 2};
+                    static int8_t DB[] = {-1, -1, 4, 4, -1, 1};
+                    next(-1, DA[pat], DB[pbt], 0, 3);
+                  }
+                  {
+                    static int8_t DA[] = {4, 4, -1, -1, -1, 3};
+                    static int8_t DB[] = {-1, -1, 4, 4, -1, 0};
+                    next(1, DA[pat], DB[pbt], 1, 2);
+                  }
                 }
-                {
-                  static int8_t DA[] = {5, -1, -1, 5, 1, -1};
-                  static int8_t DB[] = {-1, 5, 5, -1, 0, -1};
-                  next(ROW, DA[pat], DB[pbt], 3, 2);
-                }
-              } else {
-                {
-                  static int8_t DA[] = {4, 4, -1, -1, -1, 2};
-                  static int8_t DB[] = {-1, -1, 4, 4, -1, 1};
-                  next(-1, DA[pat], DB[pbt], 0, 3);
-                }
-                {
-                  static int8_t DA[] = {4, 4, -1, -1, -1, 3};
-                  static int8_t DB[] = {-1, -1, 4, 4, -1, 0};
-                  next(1, DA[pat], DB[pbt], 1, 2);
-                }
+                put(a, pat, pac);
+                put(b, pbt, pbc);
               }
-              put(a, pat, pac);
-              put(b, pbt, pbc);
             }
           }
           if (v > INT_MIN) {
@@ -239,44 +241,46 @@ class GarlandOfLights {
             put(p4, t4, c4);
             goto start;
           }
-          for (int j = 0; j < MAX_X; ++j) {
-            if (type[j] < 0) continue;
-            if (get_random() & 1) continue;
-            int p = j;
-            int pt = type[p];
-            int np = p + D[pt][0] + D[pt][1];
-            auto next = [&](int nt, int8_t *DA, int8_t *DB) {
-              if (type[np] == -1) {
-                int a = p + D[pt][0];
-                int b = p + D[pt][1];
-                int pat = type[a], pbt = type[b];
-                int pac = color[a], pbc = color[b];
-                del({a, b});
-                if (put(a, DA[pat]) && put(b, DB[pbt]) && put(np, nt)) {
-                  del(p);
-                } else {
+          for (int i = 1; i <= H; ++i) {
+            for (int j = 1; j <= W; ++j) {
+              int p = (i << 7) | j;
+              if (type[p] < 0) continue;
+              if (get_random() & 1) continue;
+              int pt = type[p];
+              int np = p + D[pt][0] + D[pt][1];
+              auto next = [&](int nt, int8_t *DA, int8_t *DB) {
+                if (type[np] == -1) {
+                  int a = p + D[pt][0];
+                  int b = p + D[pt][1];
+                  int pat = type[a], pbt = type[b];
+                  int pac = color[a], pbc = color[b];
                   del({a, b});
-                  put(a, pat, pac);
-                  put(b, pbt, pbc);
+                  if (put(a, DA[pat]) && put(b, DB[pbt]) && put(np, nt)) {
+                    del(p);
+                  } else {
+                    del({a, b});
+                    put(a, pat, pac);
+                    put(b, pbt, pbc);
+                  }
                 }
+              };
+              if (pt == 0) {
+                static int8_t DA[] = {-1, -1, 5, -1, 0, -1};
+                static int8_t DB[] = {-1, -1, 4, -1, -1, 0};
+                next(2, DA, DB);
+              } else if (pt == 2) {
+                static int8_t DA[] = {5, -1, -1, -1, 2, -1};
+                static int8_t DB[] = {4, -1, -1, -1, -1, 2};
+                next(0, DA, DB);
+              } else if (pt == 1) {
+                static int8_t DA[] = {-1, -1, -1, 5, 1, -1};
+                static int8_t DB[] = {-1, -1, -1, 4, -1, 1};
+                next(3, DA, DB);
+              } else if (pt == 3) {
+                static int8_t DA[] = {-1, 5, -1, -1, 3, -1};
+                static int8_t DB[] = {-1, 4, -1, -1, -1, 3};
+                next(1, DA, DB);
               }
-            };
-            if (pt == 0) {
-              static int8_t DA[] = {-1, -1, 5, -1, 0, -1};
-              static int8_t DB[] = {-1, -1, 4, -1, -1, 0};
-              next(2, DA, DB);
-            } else if (pt == 2) {
-              static int8_t DA[] = {5, -1, -1, -1, 2, -1};
-              static int8_t DB[] = {4, -1, -1, -1, -1, 2};
-              next(0, DA, DB);
-            } else if (pt == 1) {
-              static int8_t DA[] = {-1, -1, -1, 5, 1, -1};
-              static int8_t DB[] = {-1, -1, -1, 4, -1, 1};
-              next(3, DA, DB);
-            } else if (pt == 3) {
-              static int8_t DA[] = {-1, 5, -1, -1, 3, -1};
-              static int8_t DB[] = {-1, 4, -1, -1, -1, 3};
-              next(1, DA, DB);
             }
           }
         }
