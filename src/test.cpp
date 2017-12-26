@@ -2,6 +2,58 @@
 #include <sys/time.h>
 using namespace std;
 
+class Timer {
+ public:
+  void restart();
+  double getElapsed();
+
+  Timer();
+
+ private:
+  static double rdtsc_per_sec_inv;
+
+  double getTimeOfDay();
+  unsigned long long int getCycle();
+
+  double start_time;
+  unsigned long long int start_clock;
+};
+double Timer::rdtsc_per_sec_inv = -1;
+
+inline double Timer::getElapsed() {
+  if (rdtsc_per_sec_inv != -1)
+    return (double)(getCycle() - start_clock) * rdtsc_per_sec_inv;
+
+  const double RDTSC_MEASUREMENT_INTERVAL = 0.1;
+  double res = getTimeOfDay() - start_time;
+  if (res <= RDTSC_MEASUREMENT_INTERVAL) return res;
+
+  rdtsc_per_sec_inv = 1.0 / (getCycle() - start_clock);
+  rdtsc_per_sec_inv *= getTimeOfDay() - start_time;
+  return getElapsed();
+}
+
+inline void Timer::restart() {
+  start_time = getTimeOfDay();
+  start_clock = getCycle();
+}
+
+Timer::Timer() { restart(); }
+
+inline double Timer::getTimeOfDay() {
+  timeval tv;
+  gettimeofday(&tv, 0);
+  return tv.tv_sec + tv.tv_usec * 0.000001;
+}
+
+inline unsigned long long int Timer::getCycle() {
+  unsigned int low, high;
+  __asm__ volatile("rdtsc" : "=a"(low), "=d"(high));
+  return ((unsigned long long int)low) | ((unsigned long long int)high << 32);
+}
+
+Timer timer;
+
 inline unsigned get_random() {
   static unsigned y = 2463534242;
   return y ^= (y ^= (y ^= y << 13) >> 17) << 5;
@@ -15,9 +67,10 @@ constexpr int D[6][2] = {{1, ROW},  {-1, ROW}, {-1, -ROW},
 int H, W, N, C;
 int8_t type[MAX_X];
 int8_t color[MAX_X];
+int16_t remain[6][MAX_C];
 int8_t btype[MAX_X];
 int8_t bcolor[MAX_X];
-int16_t remain[6][MAX_C];
+int16_t bremain[6][MAX_C];
 
 void print() {
   for (int i = 1; i <= H; ++i) {
@@ -26,7 +79,7 @@ void print() {
       if (type[p] == -1) {
         cerr << "   ";
       } else {
-        cerr << type[p] << color[p] << " ";
+        cerr << (int)type[p] << (int)color[p] << " ";
       }
     }
     cerr << endl;
@@ -106,255 +159,322 @@ class GarlandOfLights {
         put(p + ROW + 1, 2);
       }
       int score = 0;
-    start:
-      for (int o = 0; o < 10; ++o) {
-        {
-          int minR = INT_MAX, maxR = INT_MIN;
-          int minC = INT_MAX, maxC = INT_MIN;
+      while (true) {
+      start:
+        for (int o = 0; o < 5; ++o) {
+          {
+            int minR = INT_MAX, maxR = INT_MIN;
+            int minC = INT_MAX, maxC = INT_MIN;
+            for (int i = 1; i <= H; ++i) {
+              for (int j = 1; j <= W; ++j) {
+                int p = (i << 7) | j;
+                if (type[p] == -1) continue;
+                if (minC > i) minC = i;
+                if (maxC < i) maxC = i;
+                if (minR > j) minR = j;
+                if (maxR < j) maxR = j;
+              }
+            }
+            if (minR == 1 && maxR < W) {
+              for (int i = 1; i <= H; ++i) {
+                for (int j = W; j > 1; --j) {
+                  int p = (i << 7) | j;
+                  type[p] = type[p - 1];
+                  color[p] = color[p - 1];
+                  type[p - 1] = -1;
+                  color[p - 1] = -1;
+                }
+              }
+            }
+            if (minR > 1 && maxR == W) {
+              for (int i = 1; i <= H; ++i) {
+                for (int j = 1; j < W; ++j) {
+                  int p = (i << 7) | j;
+                  type[p] = type[p + 1];
+                  color[p] = color[p + 1];
+                  type[p + 1] = -1;
+                  color[p + 1] = -1;
+                }
+              }
+            }
+            if (minC == 1 && maxC < H) {
+              for (int i = H; i > 1; --i) {
+                for (int j = 1; j <= W; ++j) {
+                  int p = (i << 7) | j;
+                  type[p] = type[p - ROW];
+                  color[p] = color[p - ROW];
+                  type[p - ROW] = -1;
+                  color[p - ROW] = -1;
+                }
+              }
+            }
+            if (minC > 1 && maxC == H) {
+              for (int i = 1; i < H; ++i) {
+                for (int j = 1; j <= W; ++j) {
+                  int p = (i << 7) | j;
+                  type[p] = type[p + ROW];
+                  color[p] = color[p + ROW];
+                  type[p + ROW] = -1;
+                  color[p + ROW] = -1;
+                }
+              }
+            }
+          }
+          int v = INT_MIN;
+          int p1, p2, p3, p4;
+          int t1, t2, t3, t4;
+          int c1, c2, c3, c4;
           for (int i = 1; i <= H; ++i) {
             for (int j = 1; j <= W; ++j) {
               int p = (i << 7) | j;
-              if (type[p] == -1) continue;
-              if (minC > i) minC = i;
-              if (maxC < i) maxC = i;
-              if (minR > j) minR = j;
-              if (maxR < j) maxR = j;
-            }
-          }
-          if (minR == 1 && maxR < W) {
-            for (int i = 1; i <= H; ++i) {
-              for (int j = W; j > 1; --j) {
-                int p = (i << 7) | j;
-                type[p] = type[p - 1];
-                color[p] = color[p - 1];
-                type[p - 1] = -1;
-                color[p - 1] = -1;
-              }
-            }
-          }
-          if (minR > 1 && maxR == W) {
-            for (int i = 1; i <= H; ++i) {
-              for (int j = 1; j < W; ++j) {
-                int p = (i << 7) | j;
-                type[p] = type[p + 1];
-                color[p] = color[p + 1];
-                type[p + 1] = -1;
-                color[p + 1] = -1;
-              }
-            }
-          }
-          if (minC == 1 && maxC < H) {
-            for (int i = H; i > 1; --i) {
-              for (int j = 1; j <= W; ++j) {
-                int p = (i << 7) | j;
-                type[p] = type[p - ROW];
-                color[p] = color[p - ROW];
-                type[p - ROW] = -1;
-                color[p - ROW] = -1;
-              }
-            }
-          }
-          if (minC > 1 && maxC == H) {
-            for (int i = 1; i < H; ++i) {
-              for (int j = 1; j <= W; ++j) {
-                int p = (i << 7) | j;
-                type[p] = type[p + ROW];
-                color[p] = color[p + ROW];
-                type[p + ROW] = -1;
-                color[p + ROW] = -1;
-              }
-            }
-          }
-        }
-        int v = INT_MIN;
-        int p1, p2, p3, p4;
-        int t1, t2, t3, t4;
-        int c1, c2, c3, c4;
-        for (int i = 1; i <= H; ++i) {
-          for (int j = 1; j <= W; ++j) {
-            int p = (i << 7) | j;
-            if (type[p] < 0) continue;
-            for (int k = 0; k < 2; ++k) {
-              int a = p;
-              int b = a + D[type[a]][k];
-              if (a > b) swap(a, b);
-              int pat = type[a], pbt = type[b];
-              int pac = color[a], pbc = color[b];
-              del({a, b});
-              auto next = [&](int m, int8_t at, int8_t bt, int8_t ct,
-                              int8_t dt) {
-                int c = a + m;
-                int d = b + m;
-                if (type[c] == -1 && type[d] == -1) {
-                  if (put(a, at) && put(b, bt) && put(c, ct) && put(d, dt)) {
-                    int tv = 0;
-                    tv += remain[at][color[a]];
-                    tv += remain[bt][color[b]];
-                    tv += remain[ct][color[c]];
-                    tv += remain[dt][color[d]];
-                    tv -= remain[pat][pac];
-                    tv -= remain[pbt][pbc];
-                    tv = (tv * 0x10000) + (get_random() & 0xffff);
-                    if (v < tv) {
-                      v = tv;
-                      p1 = a, t1 = at, c1 = color[a];
-                      p2 = b, t2 = bt, c2 = color[b];
-                      p3 = c, t3 = ct, c3 = color[c];
-                      p4 = d, t4 = dt, c4 = color[d];
-                    }
-                  }
-                  del({a, b, c, d});
-                }
-              };
-              if (a + 1 == b) {
-                {
-                  static int8_t DA[] = {5, -1, -1, 5, 2, -1};
-                  static int8_t DB[] = {-1, 5, 5, -1, 3, -1};
-                  next(-ROW, DA[pat], DB[pbt], 0, 1);
-                }
-                {
-                  static int8_t DA[] = {5, -1, -1, 5, 1, -1};
-                  static int8_t DB[] = {-1, 5, 5, -1, 0, -1};
-                  next(ROW, DA[pat], DB[pbt], 3, 2);
-                }
-              } else {
-                {
-                  static int8_t DA[] = {4, 4, -1, -1, -1, 2};
-                  static int8_t DB[] = {-1, -1, 4, 4, -1, 1};
-                  next(-1, DA[pat], DB[pbt], 0, 3);
-                }
-                {
-                  static int8_t DA[] = {4, 4, -1, -1, -1, 3};
-                  static int8_t DB[] = {-1, -1, 4, 4, -1, 0};
-                  next(1, DA[pat], DB[pbt], 1, 2);
-                }
-              }
-              put(a, pat, pac);
-              put(b, pbt, pbc);
-            }
-          }
-        }
-        if (v > INT_MIN) {
-          del({p1, p2});
-          put(p1, t1, c1);
-          put(p2, t2, c2);
-          put(p3, t3, c3);
-          put(p4, t4, c4);
-          goto start;
-        }
-        for (int i = 1; i <= H; ++i) {
-          for (int j = 1; j <= W; ++j) {
-            int p = (i << 7) | j;
-            if (type[p] < 0) continue;
-            if (get_random() & 1) continue;
-            int pt = type[p];
-            int np = p + D[pt][0] + D[pt][1];
-            auto next = [&](int nt, int8_t *DA, int8_t *DB) {
-              if (type[np] == -1) {
-                int a = p + D[pt][0];
-                int b = p + D[pt][1];
+              if (type[p] < 0) continue;
+              for (int k = 0; k < 2; ++k) {
+                int a = p;
+                int b = a + D[type[a]][k];
+                if (a > b) swap(a, b);
                 int pat = type[a], pbt = type[b];
                 int pac = color[a], pbc = color[b];
                 del({a, b});
-                if (put(a, DA[pat]) && put(b, DB[pbt]) && put(np, nt)) {
-                  del(p);
+                auto next = [&](int m, int8_t at, int8_t bt, int8_t ct,
+                                int8_t dt) {
+                  int c = a + m;
+                  int d = b + m;
+                  if (type[c] == -1 && type[d] == -1) {
+                    if (put(a, at) && put(b, bt) && put(c, ct) && put(d, dt)) {
+                      int tv = 0;
+                      tv += remain[at][color[a]];
+                      tv += remain[bt][color[b]];
+                      tv += remain[ct][color[c]];
+                      tv += remain[dt][color[d]];
+                      tv -= remain[pat][pac];
+                      tv -= remain[pbt][pbc];
+                      tv = (tv * 0x10000) + (get_random() & 0xffff);
+                      if (v < tv) {
+                        v = tv;
+                        p1 = a, t1 = at, c1 = color[a];
+                        p2 = b, t2 = bt, c2 = color[b];
+                        p3 = c, t3 = ct, c3 = color[c];
+                        p4 = d, t4 = dt, c4 = color[d];
+                      }
+                    }
+                    del({a, b, c, d});
+                  }
+                };
+                if (a + 1 == b) {
+                  {
+                    static int8_t DA[] = {5, -1, -1, 5, 2, -1};
+                    static int8_t DB[] = {-1, 5, 5, -1, 3, -1};
+                    next(-ROW, DA[pat], DB[pbt], 0, 1);
+                  }
+                  {
+                    static int8_t DA[] = {5, -1, -1, 5, 1, -1};
+                    static int8_t DB[] = {-1, 5, 5, -1, 0, -1};
+                    next(ROW, DA[pat], DB[pbt], 3, 2);
+                  }
                 } else {
-                  del({a, b});
-                  put(a, pat, pac);
-                  put(b, pbt, pbc);
+                  {
+                    static int8_t DA[] = {4, 4, -1, -1, -1, 2};
+                    static int8_t DB[] = {-1, -1, 4, 4, -1, 1};
+                    next(-1, DA[pat], DB[pbt], 0, 3);
+                  }
+                  {
+                    static int8_t DA[] = {4, 4, -1, -1, -1, 3};
+                    static int8_t DB[] = {-1, -1, 4, 4, -1, 0};
+                    next(1, DA[pat], DB[pbt], 1, 2);
+                  }
                 }
+                put(a, pat, pac);
+                put(b, pbt, pbc);
               }
-            };
-            if (pt == 0) {
-              static int8_t DA[] = {-1, -1, 5, -1, 0, -1};
-              static int8_t DB[] = {-1, -1, 4, -1, -1, 0};
-              next(2, DA, DB);
-            } else if (pt == 2) {
-              static int8_t DA[] = {5, -1, -1, -1, 2, -1};
-              static int8_t DB[] = {4, -1, -1, -1, -1, 2};
-              next(0, DA, DB);
-            } else if (pt == 1) {
-              static int8_t DA[] = {-1, -1, -1, 5, 1, -1};
-              static int8_t DB[] = {-1, -1, -1, 4, -1, 1};
-              next(3, DA, DB);
-            } else if (pt == 3) {
-              static int8_t DA[] = {-1, 5, -1, -1, 3, -1};
-              static int8_t DB[] = {-1, 4, -1, -1, -1, 3};
-              next(1, DA, DB);
+            }
+          }
+          if (v > INT_MIN) {
+            del({p1, p2});
+            put(p1, t1, c1);
+            put(p2, t2, c2);
+            put(p3, t3, c3);
+            put(p4, t4, c4);
+            goto start;
+          }
+          for (int i = 1; i <= H; ++i) {
+            for (int j = 1; j <= W; ++j) {
+              int p = (i << 7) | j;
+              if (type[p] < 0) continue;
+              if (get_random() & 1) continue;
+              int pt = type[p];
+              int np = p + D[pt][0] + D[pt][1];
+              auto next = [&](int nt, int8_t *DA, int8_t *DB) {
+                if (type[np] == -1) {
+                  int a = p + D[pt][0];
+                  int b = p + D[pt][1];
+                  int pat = type[a], pbt = type[b];
+                  int pac = color[a], pbc = color[b];
+                  del({a, b});
+                  if (put(a, DA[pat]) && put(b, DB[pbt]) && put(np, nt)) {
+                    del(p);
+                  } else {
+                    del({a, b});
+                    put(a, pat, pac);
+                    put(b, pbt, pbc);
+                  }
+                }
+              };
+              if (pt == 0) {
+                static int8_t DA[] = {-1, -1, 5, -1, 0, -1};
+                static int8_t DB[] = {-1, -1, 4, -1, -1, 0};
+                next(2, DA, DB);
+              } else if (pt == 2) {
+                static int8_t DA[] = {5, -1, -1, -1, 2, -1};
+                static int8_t DB[] = {4, -1, -1, -1, -1, 2};
+                next(0, DA, DB);
+              } else if (pt == 1) {
+                static int8_t DA[] = {-1, -1, -1, 5, 1, -1};
+                static int8_t DB[] = {-1, -1, -1, 4, -1, 1};
+                next(3, DA, DB);
+              } else if (pt == 3) {
+                static int8_t DA[] = {-1, 5, -1, -1, 3, -1};
+                static int8_t DB[] = {-1, 4, -1, -1, -1, 3};
+                next(1, DA, DB);
+              }
             }
           }
         }
-      }
-      {
-        for (int i = 0; i < MAX_X; ++i) {
-          if (type[i] > -1) {
-            int t = type[i];
-            if (t == 0) {
-              int x;
-              x = type[i + 1];
-              assert(x == 1 || x == 2 || x == 4);
-              x = type[i + ROW];
-              assert(x == 2 || x == 3 || x == 5);
-            }
-            if (t == 1) {
-              int x;
-              x = type[i - 1];
-              assert(x == 0 || x == 3 || x == 4);
-              x = type[i + ROW];
-              assert(x == 2 || x == 3 || x == 5);
-            }
-            if (t == 2) {
-              int x;
-              x = type[i - 1];
-              assert(x == 0 || x == 3 || x == 4);
-              x = type[i - ROW];
-              assert(x == 0 || x == 1 || x == 5);
-            }
-            if (t == 3) {
-              int x;
-              x = type[i + 1];
-              assert(x == 1 || x == 2 || x == 4);
-              x = type[i - ROW];
-              assert(x == 0 || x == 1 || x == 5);
-            }
-            if (t == 4) {
-              int x;
-              x = type[i + 1];
-              assert(x == 1 || x == 2 || x == 4);
-              x = type[i - 1];
-              assert(x == 0 || x == 3 || x == 4);
-            }
-            if (t == 5) {
-              int x;
-              x = type[i + ROW];
-              assert(x == 2 || x == 3 || x == 5);
-              x = type[i - ROW];
-              assert(x == 0 || x == 1 || x == 5);
+        {
+          for (int i = 0; i < MAX_X; ++i) {
+            if (type[i] > -1) {
+              int t = type[i];
+              if (t == 0) {
+                int x;
+                x = type[i + 1];
+                assert(x == 1 || x == 2 || x == 4);
+                x = type[i + ROW];
+                assert(x == 2 || x == 3 || x == 5);
+              }
+              if (t == 1) {
+                int x;
+                x = type[i - 1];
+                assert(x == 0 || x == 3 || x == 4);
+                x = type[i + ROW];
+                assert(x == 2 || x == 3 || x == 5);
+              }
+              if (t == 2) {
+                int x;
+                x = type[i - 1];
+                assert(x == 0 || x == 3 || x == 4);
+                x = type[i - ROW];
+                assert(x == 0 || x == 1 || x == 5);
+              }
+              if (t == 3) {
+                int x;
+                x = type[i + 1];
+                assert(x == 1 || x == 2 || x == 4);
+                x = type[i - ROW];
+                assert(x == 0 || x == 1 || x == 5);
+              }
+              if (t == 4) {
+                int x;
+                x = type[i + 1];
+                assert(x == 1 || x == 2 || x == 4);
+                x = type[i - 1];
+                assert(x == 0 || x == 3 || x == 4);
+              }
+              if (t == 5) {
+                int x;
+                x = type[i + ROW];
+                assert(x == 2 || x == 3 || x == 5);
+                x = type[i - ROW];
+                assert(x == 0 || x == 1 || x == 5);
+              }
             }
           }
         }
-      }
-      {
-        int sum = 0;
-        for (int i = 0; i < 6; ++i) {
-          for (int j = 0; j < 4; ++j) {
-            sum += remain[i][j];
+        {
+          int sum = 0;
+          for (int i = 0; i < 6; ++i) {
+            for (int j = 0; j < 4; ++j) {
+              sum += remain[i][j];
+            }
+          }
+          for (int i = 0; i < MAX_X; ++i) {
+            if (type[i] > -1) ++sum;
+          }
+          assert(sum == N);
+        }
+        {
+          int s = 0;
+          for (int i = 1; i <= H; ++i) {
+            for (int j = 1; j <= W; ++j) {
+              if (type[(i << 7) | j] > -1) ++s;
+            }
+          }
+          if (score < s) {
+            score = s;
+            memcpy(btype, type, sizeof(type));
+            memcpy(bcolor, color, sizeof(color));
+            memcpy(bremain, remain, sizeof(remain));
           }
         }
-        for (int i = 0; i < MAX_X; ++i) {
-          if (type[i] > -1) ++sum;
-        }
-        assert(sum == N);
-      }
-      {
-        int s = 0;
-        for (int i = 0; i < MAX_X; ++i) {
-          if (type[i] > -1) ++s;
-        }
-        if (score < s) {
-          score = s;
-          memcpy(btype, type, sizeof(type));
-          memcpy(bcolor, color, sizeof(color));
+        if (2.0 < timer.getElapsed()) break;
+        while (true) {
+          memcpy(type, btype, sizeof(type));
+          memcpy(color, bcolor, sizeof(color));
+          memcpy(remain, bremain, sizeof(remain));
+          int a, b;
+          while (true) {
+            a = get_random() % MAX_X;
+            if (type[a] < 0) continue;
+            const int *d = D[type[a]];
+            b = a + 1;
+            if (type[b] > -1 && b != a + d[0] && b != a + d[1]) break;
+            b = a + ROW;
+            if (type[b] > -1 && b != a + d[0] && b != a + d[1]) break;
+          }
+          static bool use[MAX_X];
+          memset(use, true, sizeof(use));
+          int c = 1, t = a;
+          while (t != b) {
+            use[t] = false;
+            ++c;
+            if (use[t + D[type[t]][0]]) {
+              t += D[type[t]][0];
+            } else {
+              t += D[type[t]][1];
+            }
+          }
+          int k = score - c > c - 2 ? 0 : 1;
+          memset(use, true, sizeof(use));
+          t = a;
+          while (t != b) {
+            use[t] = false;
+            const int *d = D[type[t]];
+            del(t);
+            if (use[t + d[k]]) {
+              t = t + d[k];
+            } else {
+              t = t + d[1 - k];
+            }
+          }
+          del({a, b});
+          auto f = [&](int p) {
+            int n, t;
+            static int Z[] = {1, -1, ROW, -ROW};
+            for (int i = 0; i < 4; ++i) {
+              int n = p + Z[i], t = type[n];
+              if (t > -1 && (p == n + D[t][0] || p == n + D[t][1])) return n;
+            }
+            assert(false);
+          };
+          auto g = [&](int a, int b) {
+            for (int i = 0; i < 6; ++i) {
+              const int *d = D[i];
+              if ((d[0] == a && d[1] == b) || (d[1] == a && d[0] == b))
+                return i;
+            }
+            assert(false);
+          };
+          int at = g(b - a, f(a) - a);
+          int bt = g(a - b, f(b) - b);
+          if (put(a, at) && put(b, bt)) break;
         }
       }
     }
