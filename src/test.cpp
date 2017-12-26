@@ -222,8 +222,8 @@ class GarlandOfLights {
           }
           int v = INT_MIN;
           int p1, p2, p3, p4;
-          int t1, t2, t3, t4;
-          int c1, c2, c3, c4;
+          int8_t t1, t2, t3, t4;
+          int8_t c1, c2, c3, c4;
           for (int i = 1; i <= H; ++i) {
             for (int j = 1; j <= W; ++j) {
               int p = (i << 7) | j;
@@ -231,9 +231,9 @@ class GarlandOfLights {
               for (int k = 0; k < 2; ++k) {
                 int a = p;
                 int b = a + D[type[a]][k];
-                if (a > b) swap(a, b);
-                int pat = type[a], pbt = type[b];
-                int pac = color[a], pbc = color[b];
+                if (a > b) continue;
+                int8_t pat = type[a], pac = color[a];
+                int8_t pbt = type[b], pbc = color[b];
                 del({a, b});
                 auto next = [&](int m, int8_t at, int8_t bt, int8_t ct,
                                 int8_t dt) {
@@ -307,8 +307,8 @@ class GarlandOfLights {
                 if (type[np] == -1) {
                   int a = p + D[pt][0];
                   int b = p + D[pt][1];
-                  int pat = type[a], pbt = type[b];
-                  int pac = color[a], pbc = color[b];
+                  int8_t pat = type[a], pac = color[a];
+                  int8_t pbt = type[b], pbc = color[b];
                   del({a, b});
                   if (put(a, DA[pat]) && put(b, DB[pbt]) && put(np, nt)) {
                     del(p);
