@@ -407,7 +407,7 @@ class GarlandOfLights {
               if (type[(i << 7) | j] > -1) ++s;
             }
           }
-          if (score < s) {
+          if (score <= s) {
             score = s;
             memcpy(btype, type, sizeof(type));
             memcpy(bcolor, color, sizeof(color));
