@@ -159,23 +159,29 @@ class GarlandOfLights {
         put(p + ROW + 1, 2);
       }
       int score = 0;
+      int minR, maxR, minC, maxC;
+      auto MinMaxRowCol = [&]() {
+        minR = INT_MAX, maxR = INT_MIN;
+        minC = INT_MAX, maxC = INT_MIN;
+        for (int i = 1; i <= H; ++i) {
+          for (int j = 1; j <= W; ++j) {
+            int p = (i << 7) | j;
+            if (type[p] == -1) continue;
+            if (minC > i) minC = i;
+            if (maxC < i) maxC = i;
+            if (minR > j) minR = j;
+            if (maxR < j) maxR = j;
+          }
+        }
+      };
+      MinMaxRowCol();
       while (true) {
       start:
         for (int o = 0; o < 5; ++o) {
           {
-            int minR = INT_MAX, maxR = INT_MIN;
-            int minC = INT_MAX, maxC = INT_MIN;
-            for (int i = 1; i <= H; ++i) {
-              for (int j = 1; j <= W; ++j) {
-                int p = (i << 7) | j;
-                if (type[p] == -1) continue;
-                if (minC > i) minC = i;
-                if (maxC < i) maxC = i;
-                if (minR > j) minR = j;
-                if (maxR < j) maxR = j;
-              }
-            }
             if (minR == 1 && maxR < W) {
+              ++minR;
+              ++maxR;
               for (int i = 1; i <= H; ++i) {
                 for (int j = W; j > 1; --j) {
                   int p = (i << 7) | j;
@@ -185,8 +191,9 @@ class GarlandOfLights {
                   color[p - 1] = -1;
                 }
               }
-            }
-            if (minR > 1 && maxR == W) {
+            } else if (minR > 1 && maxR == W) {
+              --minR;
+              --maxR;
               for (int i = 1; i <= H; ++i) {
                 for (int j = 1; j < W; ++j) {
                   int p = (i << 7) | j;
@@ -198,6 +205,8 @@ class GarlandOfLights {
               }
             }
             if (minC == 1 && maxC < H) {
+              ++minC;
+              ++maxC;
               for (int i = H; i > 1; --i) {
                 for (int j = 1; j <= W; ++j) {
                   int p = (i << 7) | j;
@@ -207,8 +216,9 @@ class GarlandOfLights {
                   color[p - ROW] = -1;
                 }
               }
-            }
-            if (minC > 1 && maxC == H) {
+            } else if (minC > 1 && maxC == H) {
+              --minC;
+              --maxC;
               for (int i = 1; i < H; ++i) {
                 for (int j = 1; j <= W; ++j) {
                   int p = (i << 7) | j;
@@ -294,6 +304,15 @@ class GarlandOfLights {
             put(p2, t2, c2);
             put(p3, t3, c3);
             put(p4, t4, c4);
+            int L[] = {p3, p4};
+            for (int p : L) {
+              int c = p >> 7;
+              int r = p & (ROW - 1);
+              if (minC > c) minC = c;
+              if (maxC < c) maxC = c;
+              if (minR > r) minR = r;
+              if (maxR < r) maxR = r;
+            }
             goto start;
           }
           for (int i = 1; i <= H; ++i) {
@@ -476,6 +495,7 @@ class GarlandOfLights {
           int bt = g(a - b, f(b) - b);
           if (put(a, at) && put(b, bt)) break;
         }
+        MinMaxRowCol();
       }
     }
     {  // output
