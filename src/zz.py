@@ -40,8 +40,8 @@ def worker():
         seed = q.get()
         if seed is None:
             break
-        a = solve(MAIN, seed)
-        b = solve(TEST, seed)
+        a = (solve(MAIN, seed) - 0.9) * 100
+        b = (solve(TEST, seed) - 0.9) * 100
         scores.add(seed, a, b)
         q.task_done()
 
