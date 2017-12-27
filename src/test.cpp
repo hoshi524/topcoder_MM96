@@ -229,7 +229,7 @@ class GarlandOfLights {
             }
           }
         }
-        for (int o = 0; o < 5; ++o) {
+        for (int o = 0;; ++o) {
           int v = INT_MIN;
           int p1, p2, p3, p4;
           int8_t t1, t2, t3, t4;
@@ -315,6 +315,7 @@ class GarlandOfLights {
             }
             goto start;
           }
+          if (o > 5) break;
           for (int i = 1; i <= H; ++i) {
             for (int j = 1; j <= W; ++j) {
               int p = (i << 7) | j;
