@@ -176,60 +176,60 @@ class GarlandOfLights {
       };
       MinMaxRowCol();
       while (true) {
-      start:
-        for (int o = 0; o < 5; ++o) {
-          {
-            if (minR == 1 && maxR < W) {
-              ++minR;
-              ++maxR;
-              for (int i = 1; i <= H; ++i) {
-                for (int j = W; j > 1; --j) {
-                  int p = (i << 7) | j;
-                  type[p] = type[p - 1];
-                  color[p] = color[p - 1];
-                  type[p - 1] = -1;
-                  color[p - 1] = -1;
-                }
-              }
-            } else if (minR > 1 && maxR == W) {
-              --minR;
-              --maxR;
-              for (int i = 1; i <= H; ++i) {
-                for (int j = 1; j < W; ++j) {
-                  int p = (i << 7) | j;
-                  type[p] = type[p + 1];
-                  color[p] = color[p + 1];
-                  type[p + 1] = -1;
-                  color[p + 1] = -1;
-                }
+      start:;
+        {
+          if (minR == 1 && maxR < W) {
+            ++minR;
+            ++maxR;
+            for (int i = 1; i <= H; ++i) {
+              for (int j = W; j > 1; --j) {
+                int p = (i << 7) | j;
+                type[p] = type[p - 1];
+                color[p] = color[p - 1];
+                type[p - 1] = -1;
+                color[p - 1] = -1;
               }
             }
-            if (minC == 1 && maxC < H) {
-              ++minC;
-              ++maxC;
-              for (int i = H; i > 1; --i) {
-                for (int j = 1; j <= W; ++j) {
-                  int p = (i << 7) | j;
-                  type[p] = type[p - ROW];
-                  color[p] = color[p - ROW];
-                  type[p - ROW] = -1;
-                  color[p - ROW] = -1;
-                }
-              }
-            } else if (minC > 1 && maxC == H) {
-              --minC;
-              --maxC;
-              for (int i = 1; i < H; ++i) {
-                for (int j = 1; j <= W; ++j) {
-                  int p = (i << 7) | j;
-                  type[p] = type[p + ROW];
-                  color[p] = color[p + ROW];
-                  type[p + ROW] = -1;
-                  color[p + ROW] = -1;
-                }
+          } else if (minR > 1 && maxR == W) {
+            --minR;
+            --maxR;
+            for (int i = 1; i <= H; ++i) {
+              for (int j = 1; j < W; ++j) {
+                int p = (i << 7) | j;
+                type[p] = type[p + 1];
+                color[p] = color[p + 1];
+                type[p + 1] = -1;
+                color[p + 1] = -1;
               }
             }
           }
+          if (minC == 1 && maxC < H) {
+            ++minC;
+            ++maxC;
+            for (int i = H; i > 1; --i) {
+              for (int j = 1; j <= W; ++j) {
+                int p = (i << 7) | j;
+                type[p] = type[p - ROW];
+                color[p] = color[p - ROW];
+                type[p - ROW] = -1;
+                color[p - ROW] = -1;
+              }
+            }
+          } else if (minC > 1 && maxC == H) {
+            --minC;
+            --maxC;
+            for (int i = 1; i < H; ++i) {
+              for (int j = 1; j <= W; ++j) {
+                int p = (i << 7) | j;
+                type[p] = type[p + ROW];
+                color[p] = color[p + ROW];
+                type[p + ROW] = -1;
+                color[p + ROW] = -1;
+              }
+            }
+          }
+        }
+        for (int o = 0; o < 5; ++o) {
           int v = INT_MIN;
           int p1, p2, p3, p4;
           int8_t t1, t2, t3, t4;
